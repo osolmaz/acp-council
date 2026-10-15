@@ -1,0 +1,42 @@
+typescript:
+  coverage:
+    threshold: 85
+  complexity:
+    max: 8
+  dry:
+    max_findings: 0
+    paths:
+      - src
+  mutation:
+    targets:
+      - src/domain/count.ts
+      - src/domain/vote.ts
+      - src/domain/council.ts
+  dependency_boundaries:
+    - from: src/meta
+      allow:
+        - src/meta
+    - from: src/domain
+      allow:
+        - src/domain
+    - from: src/config
+      allow:
+        - src/config
+    - from: src/acp
+      allow:
+        - src/acp
+        - src/config
+        - src/meta
+    - from: src/run
+      allow:
+        - src/run
+        - src/acp
+        - src/config
+        - src/domain
+        - src/meta
+    - from: src/cli
+      allow:
+        - src/cli
+        - src/config
+        - src/run
+        - src/meta

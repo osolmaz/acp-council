@@ -1,0 +1,52 @@
+{
+  "name": "acp-council",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ask a council of coding agents one question about a folder, over the Agent Client Protocol",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "acp-council": "dist/cli/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "packageManager": "pnpm@10.20.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "mutate": "stryker run",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run coverage && pnpm run build"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "1.8.0",
+    "commander": "15.0.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
+    "@types/node": "^22.20.5",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.12.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2",
+    "vitest": "5.0.5"
+  }
+}
