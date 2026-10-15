@@ -1,9 +1,10 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { Command, CommanderError, InvalidArgumentError } from "commander";
 import {
   ConfigError,
   configDirs,
+  isCouncilPath,
   listCouncils,
   readJsonFile,
   readText,
@@ -66,8 +67,13 @@ function overridesFrom(flags: RunFlags): CouncilOverrides {
 }
 
 /** Runs go next to the configuration that holds the council: `<config folder>/runs/<run id>`. */
-function defaultOutDir(council: ResolvedCouncil, dirs: ConfigDirs): string {
-  return join(council.level === "user" ? dirs.user : (dirs.repo ?? dirs.user), "runs");
+export function defaultOutDir(council: ResolvedCouncil, dirs: ConfigDirs): string {
+  const folders: Record<ResolvedCouncil["level"], string> = {
+    repo: dirs.repo ?? dirs.user,
+    user: dirs.user,
+    file: dirname(council.path),
+  };
+  return join(folders[council.level], "runs");
 }
 
 async function questionText(flags: RunFlags, council: ResolvedCouncil, io: Io): Promise<string> {
@@ -94,7 +100,8 @@ async function runCommand(name: string, flags: RunFlags, io: Io): Promise<void> 
     env: io.env,
     ...(flags.configDir === undefined ? {} : { configDir: flags.configDir }),
   });
-  const council = await resolveCouncil(name, dirs, overridesFrom(flags));
+  const target = isCouncilPath(name) ? resolve(io.cwd, name) : name;
+  const council = await resolveCouncil(target, dirs, overridesFrom(flags));
   const outDir = flags.out === undefined ? defaultOutDir(council, dirs) : resolve(io.cwd, flags.out);
   await mkdir(outDir, { recursive: true });
   await writeFile(join(outDir, ".gitignore"), "*\n");

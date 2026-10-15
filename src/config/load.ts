@@ -139,11 +139,16 @@ export async function loadMembers(dirs: ConfigDirs): Promise<{ path: string; mem
   return { path: found.path, members: await readJsonFile(found.path, membersFileSchema) };
 }
 
+/** Whether a council argument is the path of a council file rather than a council name. */
+export function isCouncilPath(name: string): boolean {
+  return name.endsWith(".json") || name.includes("/");
+}
+
 async function locateCouncil(
   name: string,
   dirs: ConfigDirs,
 ): Promise<{ name: string; level: ConfigLevel; path: string }> {
-  if (name.endsWith(".json") || name.includes("/")) {
+  if (isCouncilPath(name)) {
     return { name: basename(name, ".json"), level: "file", path: resolve(name) };
   }
   if (!NAME.test(name)) {

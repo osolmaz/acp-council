@@ -8,7 +8,7 @@ import { compileVoteSchema } from "../domain/vote.ts";
 import { assertResumable, hashInputs, newRunId } from "./inputs.ts";
 import { backupRun, writeResult, writeRunJson, type RunHeader } from "./outputs.ts";
 import { RoundLoop, type Progress, type StopReason } from "./rounds.ts";
-import { seatMembers } from "./seats.ts";
+import { seatMembers, type SeatedMember } from "./seats.ts";
 import { RunStore } from "./store.ts";
 import { Workspace } from "./workspace.ts";
 
@@ -49,13 +49,14 @@ export async function runCouncil(options: RunOptions): Promise<RunOutcome> {
   const labels = council.members.map((_, index) => memberLabel(index));
   const inputs = await hashInputs(council, question, items, folder);
   const header: RunHeader = { runId, council, question, folder, inputs };
+  const schema = compileVoteSchema(council.schema?.json);
   await store.init(labels);
   await assertResumable(store, inputs);
   const workspace = await Workspace.create();
-  const schema = compileVoteSchema(council.schema?.json);
-  const seats = await seatMembers({ council, labels, folder, question, items, schema }, workspace, store);
+  const seats: SeatedMember[] = [];
   let outcome: { stop: StopReason; result: CouncilResult };
   try {
+    seats.push(...(await seatMembers({ council, labels, folder, question, items, schema }, workspace, store)));
     await writeRunJson(store, header, seats);
     const settings = council.council;
     const state = startCouncil({ mode: settings.mode, rule: settings.rule, rounds: settings.rounds, items, labels });
