@@ -3,7 +3,11 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ResolvedCouncil } from "../src/config/load.ts";
 import { councilFileSchema, type CouncilFile } from "../src/config/schema.ts";
-import { boardFromRecords, newRunId, RunError, runCouncil, type Progress, type RunOptions } from "../src/run/runner.ts";
+import { boardFromRecords } from "../src/run/board.ts";
+import { RunError } from "../src/run/errors.ts";
+import { newRunId } from "../src/run/inputs.ts";
+import type { Progress } from "../src/run/rounds.ts";
+import { runCouncil, type RunOptions } from "../src/run/runner.ts";
 import { fakeMember, folderWith, prompts, reply, tempDir, type FakeScript } from "./helpers.ts";
 
 type Setup = { dir: string; folder: string; logs: string[]; council: ResolvedCouncil };
@@ -153,7 +157,7 @@ describe("runCouncil", () => {
       {},
       { type: "object", properties: { choice: { enum: ["yes", "no"] }, reason: { type: "string" } } },
     );
-    const outcome = await runCouncil({ ...options(s), items: undefined as never });
+    const outcome = await runCouncil({ ...options(s), items: undefined });
     const answer = outcome.result.items[0];
     expect(answer?.id).toBe("answer");
     expect(answer?.members["member:A"]?.final).toEqual({ choice: "yes", reason: "r" });

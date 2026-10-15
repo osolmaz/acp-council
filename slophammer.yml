@@ -16,24 +16,34 @@ typescript:
     - from: src/meta
       allow:
         - src/meta
+    - from: src/util
+      allow:
+        - src/util
     - from: src/domain
       allow:
         - src/domain
     - from: src/config
       allow:
         - src/config
+    - from: src/agents
+      allow:
+        - src/agents
+        - src/config
     - from: src/acp
       allow:
         - src/acp
-        - src/config
+        - src/agents
         - src/meta
+        - src/util
     - from: src/run
       allow:
         - src/run
         - src/acp
+        - src/agents
         - src/config
         - src/domain
         - src/meta
+        - src/util
     - from: src/cli
       allow:
         - src/cli

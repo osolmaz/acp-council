@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { memberLabel, messageId, visibleMessages } from "../src/domain/board.ts";
+import { memberLabel, messageId } from "../src/domain/board.ts";
 import { countItem, countRound } from "../src/domain/count.ts";
 import { applyRound, councilResult, nextRound, startCouncil, type CouncilSpec } from "../src/domain/council.ts";
+import { blind, discuss, MODES } from "../src/domain/modes.ts";
 import { buildNudgePrompt, buildTurnPrompt, formatMessage } from "../src/domain/prompts.ts";
 import { renderReport } from "../src/domain/report.ts";
 import type { Message, Vote } from "../src/domain/types.ts";
@@ -51,22 +52,42 @@ describe("board", () => {
     expect(messageId(0)).toBe("m0001");
     expect(messageId(41)).toBe("m0042");
   });
+});
 
-  it("shows messages from ended rounds, and own messages only to a new session", () => {
-    const message = (id: string, round: number, from: string): Message => ({
-      id,
-      round,
-      from,
-      refs: [],
-      body: id,
-      vote: {},
-      createdAt: "",
-    });
-    const board = [message("m1", 1, "member:A"), message("m2", 1, "member:B"), message("m3", 2, "member:B")];
-    expect(visibleMessages(board, "member:A", 2, false).map((m) => m.id)).toEqual(["m2"]);
-    expect(visibleMessages(board, "member:A", 2, true).map((m) => m.id)).toEqual(["m1", "m2"]);
-    expect(visibleMessages(board, "member:A", 3, false).map((m) => m.id)).toEqual(["m2", "m3"]);
-    expect(visibleMessages(board, "member:A", 1, true)).toEqual([]);
+describe("modes", () => {
+  const message = (id: string, round: number, from: string): Message => ({
+    id,
+    round,
+    from,
+    refs: [],
+    body: id,
+    vote: {},
+    createdAt: "",
+  });
+  const board = [message("m1", 1, "member:A"), message("m2", 1, "member:B"), message("m3", 2, "member:B")];
+  const seen = (round: number, freshSession: boolean): string[] =>
+    board.filter((m) => discuss.visible(m, { label: "member:A", round, freshSession })).map((m) => m.id);
+
+  it("shows discuss messages from ended rounds, and own messages only to a new session", () => {
+    expect(seen(2, false)).toEqual(["m2"]);
+    expect(seen(2, true)).toEqual(["m1", "m2"]);
+    expect(seen(3, false)).toEqual(["m2", "m3"]);
+    expect(seen(1, true)).toEqual([]);
+  });
+
+  it("never shows a message in blind mode", () => {
+    expect(board.some((m) => blind.visible(m, { label: "member:A", round: 2, freshSession: true }))).toBe(false);
+  });
+
+  it("plays one round in blind mode, and the blind round plus the discussion rounds in discuss mode", () => {
+    expect(MODES.blind.lastRound(5)).toBe(1);
+    expect(MODES.discuss.lastRound(5)).toBe(6);
+  });
+
+  it("asks for a blind vote first, and for replies in later rounds", () => {
+    expect(blind.instruction(1, ["a"])).toContain("## Round 1\n\nThis round is blind");
+    expect(discuss.instruction(1, ["a"])).toContain("This round is blind");
+    expect(discuss.instruction(2, ["a", "b"])).toContain("## Round 2\n\nThese items are still open: `a`, `b`.");
   });
 });
 
@@ -239,7 +260,12 @@ describe("prompts", () => {
   };
 
   it("gives a new session the question, the items and the vote format", () => {
-    const text = buildTurnPrompt({ intro, messages: [], round: 1, openItems: ["a", "b"], label: "member:A" });
+    const text = buildTurnPrompt({
+      intro,
+      messages: [],
+      instruction: blind.instruction(1, ["a", "b"]),
+      label: "member:A",
+    });
     expect(text).toContain("You are member:A, one of 2 members");
     expect(text).toContain("Is it good?");
     expect(text).toContain("- `a`: first\n- `b`");
@@ -249,7 +275,11 @@ describe("prompts", () => {
   });
 
   it("gives a later round the new messages and the open items", () => {
-    const text = buildTurnPrompt({ messages: [message], round: 2, openItems: ["a"], label: "member:A" });
+    const text = buildTurnPrompt({
+      messages: [message],
+      instruction: discuss.instruction(2, ["a"]),
+      label: "member:A",
+    });
     expect(text).not.toContain("## Question");
     expect(text).toContain("### member:B, round 1\n\nI think so.\n\nVotes:\n- `a`: yes. why yes");
     expect(text).toContain("## Round 2\n\nThese items are still open: `a`.");

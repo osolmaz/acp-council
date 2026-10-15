@@ -1,7 +1,8 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { afterAll } from "vitest";
 import type { MemberConfig } from "../src/config/schema.ts";
 
 export const FAKE_AGENT = join(dirname(fileURLToPath(import.meta.url)), "fake-agent.ts");
@@ -23,8 +24,17 @@ export type FakeScript = {
   failSessionNew?: boolean;
 };
 
+const created: string[] = [];
+
+afterAll(async () => {
+  await Promise.all(created.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+});
+
+/** A temporary folder that is removed after the test file. */
 export async function tempDir(): Promise<string> {
-  return mkdtemp(join(tmpdir(), "acp-council-test-"));
+  const dir = await mkdtemp(join(tmpdir(), "acp-council-test-"));
+  created.push(dir, `${dir}-copy`);
+  return dir;
 }
 
 /** A reply that ends with a vote block. */
