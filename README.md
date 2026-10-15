@@ -27,15 +27,13 @@ Specification stage. Nothing is implemented yet.
 
 | Mode | What happens |
 | --- | --- |
-| `panel` | Every member answers blind, and code counts the votes. |
-| `discuss` | A blind first round, then public rounds until the votes agree or a round limit is reached. |
-| `debate` | Members argue for and against each item in turn, optionally cross-examine each other in private, and a moderator or a person decides. |
-| `check` | Each item of an earlier result goes to a member of a model family that did not raise it. |
+| `blind` | Every member votes alone, and code counts the votes. |
+| `discuss` | Every member votes alone first. Then the members talk about the items they disagree on, and vote again, until they agree or a round limit is reached. Items that are still split go to a person. |
 
 ## Planned interface
 
 ```bash
-acp-council run --mode panel --members top --dir ./task --question question.md --schema vote.json
+acp-council run --mode discuss --members top --dir ./task --question question.md --items items.json --schema vote.json
 ```
 
 The first members are Claude Code, Codex and Pi.
