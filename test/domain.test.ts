@@ -311,7 +311,7 @@ describe("report", () => {
       1,
       new Map([
         ["member:A", { a: { choice: "yes", reason: "x | y" }, b: { choice: "no", reason: "n" } }],
-        ["member:B", { a: { choice: "yes", reason: "z" }, b: { choice: "yes", reason: "m" } }],
+        ["member:B", { a: { choice: "yes", reason: "z" }, b: { choice: "y|es", reason: "m" } }],
       ]),
     );
     applyRound(state, 2, new Map([["member:A", { b: { choice: "yes", reason: "agreed now" } }]]));
@@ -327,7 +327,7 @@ describe("report", () => {
     });
     expect(report).toContain("- Rounds: 2 of at most 6");
     expect(report).toContain("### b: split");
-    expect(report).toContain("| member:B | yes | yes | m |");
+    expect(report).toContain("| member:B | y\\|es | y\\|es | m |");
     expect(report).toContain("- member:A changed from no to yes in round 2: agreed now");
     expect(report).toContain("### a: agreed on yes in round 1");
     expect(report).toContain("x \\| y");

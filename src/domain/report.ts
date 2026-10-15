@@ -26,7 +26,7 @@ function choiceOf(vote: ItemVote | null): string {
 function memberTable(item: ItemResult): string {
   const rows = Object.entries(item.members).map(
     ([label, record]) =>
-      `| ${label} | ${choiceOf(record.blind)} | ${choiceOf(record.final)} | ${cell(record.final?.reason ?? "")} |`,
+      `| ${label} | ${cell(choiceOf(record.blind))} | ${cell(choiceOf(record.final))} | ${cell(record.final?.reason ?? "")} |`,
   );
   return ["| Member | Blind vote | Final vote | Final reason |", "| --- | --- | --- | --- |", ...rows].join("\n");
 }

@@ -1,7 +1,8 @@
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { main, type Io } from "../src/cli/program.ts";
+import { defaultOutDir, main, type Io } from "../src/cli/program.ts";
+import type { ResolvedCouncil } from "../src/config/load.ts";
 import { VERSION } from "../src/meta/version.ts";
 import { fakeMember, folderWith, reply, tempDir, writeJson } from "./helpers.ts";
 
@@ -82,6 +83,29 @@ describe("cli", () => {
       question: "Other question?",
       council: { mode: "blind", rounds: 6, rule: "majority", members: ["one"] },
     });
+  });
+
+  it("writes a run next to a council file given as a path", async () => {
+    const { dir, user } = await userConfig();
+    await writeJson(join(dir, "adhoc", "council.json"), { members: ["one"] });
+    const run = io(dir, { ACP_COUNCIL_HOME: user });
+    expect(
+      await main(
+        ["run", "adhoc/council.json", "--dir", "folder", "--question", "folder/doc.txt", "--run-id", "f1"],
+        run,
+      ),
+    ).toBe(0);
+    expect(await readdir(join(dir, "adhoc", "runs"))).toContain("f1");
+  });
+
+  it("picks the runs folder of the level that holds the council", () => {
+    const council = (level: ResolvedCouncil["level"]): ResolvedCouncil =>
+      ({ level, path: "/x/c.json" }) as ResolvedCouncil;
+    const dirs = { user: "/u", repo: "/r" };
+    expect(defaultOutDir(council("repo"), dirs)).toBe("/r/runs");
+    expect(defaultOutDir(council("user"), dirs)).toBe("/u/runs");
+    expect(defaultOutDir(council("file"), dirs)).toBe("/x/runs");
+    expect(defaultOutDir(council("repo"), { user: "/u", repo: null })).toBe("/u/runs");
   });
 
   it("lists councils", async () => {
