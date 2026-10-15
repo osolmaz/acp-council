@@ -68,7 +68,7 @@ execution-version pilot by Claude Opus 5.5 and GPT-6 Astra.
 ### M4: `discuss`
 
 - `src/modes/discuss.ts`: a blind first round, then discussion rounds on the open items only, closing each item
-  when its votes meet the rule, and stopping when no item is open or at `--rounds`.
+  when its votes meet the rule, and stopping when no item is open or at `--rounds` (default 5, lowest 5).
 - Keep each member's blind and final vote per item, and each change of vote with its reason.
 - Done when fake-agent tests cover agreement after the blind round (no discussion), agreement in round 2, a split
   left at the round limit, a changed vote with its reason, and a member with `no_result` in one round.

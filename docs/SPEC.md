@@ -206,12 +206,13 @@ runs/<run id>/
 
 ```bash
 acp-council run --mode blind --members top --dir ./task --question question.md --items items.json --schema vote.json
-acp-council run --mode discuss --members opus,astra --rounds 3 --dir ./task --question question.md --items items.json --schema vote.json
+acp-council run --mode discuss --members opus,astra --rounds 8 --dir ./task --question question.md --items items.json --schema vote.json
 acp-council show runs/<run id>
 ```
 
-`--rounds` is the most discussion rounds after the blind round. The same operations are exported as a TypeScript
-API, so that other tools call acp-council in code.
+`--rounds` is the most discussion rounds after the blind round. The default is 5, and the lowest value is 5. The
+limit stops a run in which the members never agree. The same operations are exported as a TypeScript API, so that
+other tools call acp-council in code.
 
 ## Later
 
