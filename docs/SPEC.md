@@ -23,7 +23,7 @@ they agree or a round limit is reached. A person makes the final decision; the c
 
 - Not a general agent framework or workflow engine.
 - Not for tasks that change files. Members advise; they do not edit the folder they review.
-- Not a benchmark runner. Grading of benchmark answers stays in Harbor.
+- Not a benchmark runner.
 - No web interface in the first version.
 
 ## Terms
@@ -34,7 +34,7 @@ they agree or a round limit is reached. A person makes the final decision; the c
 | member | one agent with one model, such as Claude Code with Claude Opus 5.5 |
 | tier | a named set of members in the configuration, such as `top` |
 | question | the prompt that the council answers |
-| item | one thing that the council votes on, such as one planted defect; a question with no item list has one item |
+| item | one thing that the council votes on; a question with no item list has one item |
 | folder | the read-only material that the members read |
 | board | the append-only list of every message in a run |
 | message | one post on the board, with its sender, its text and its vote |
@@ -105,8 +105,8 @@ The board is the only channel between members. It is `board.jsonl`, one message 
   "round": 2,
   "from": "member:B",
   "refs": ["m0003"],
-  "body": "D18: I change my vote to keep. Member A is right: Section 10.4 is the data clause, and the draft points to 10.5.",
-  "vote": {"D18": {"choice": "keep", "reason": "..."}},
+  "body": "item-2: I change my vote to yes. Member A is right: the file says this on line 40.",
+  "vote": {"item-2": {"choice": "yes", "reason": "..."}},
   "created_at": "2026-10-15T20:31:04Z"
 }
 ```
@@ -153,7 +153,7 @@ keeps each member's blind vote next to its final vote.
 
 - The caller gives the items as a JSON list of `{"id", "text"}`. A run with no item list has one item, `answer`.
 - The caller gives a JSON Schema for one item's vote. Each vote has a `choice` and a `reason`; the schema can
-  limit the choices, such as `keep`, `fix` or `drop`, and add fields.
+  limit the choices, such as `yes` or `no`, and add fields.
 - Every turn ends with one JSON block that maps each open item to its vote. It must validate. An invalid block
   gets one nudge in the same session; if it is still invalid, the turn records `no_result`, and the member has no
   vote on those items in that round.
@@ -177,8 +177,7 @@ runs/<run id>/
 ```
 
 - A rerun with the same run ID skips turns that are already saved, so a stopped run resumes without paying again.
-- Before any upload, a scan for keys blocks the upload when it finds one. Backup is a hook; the first user backs
-  up to its own bucket.
+- Before any upload, a scan for keys blocks the upload when it finds one. Backup is a hook that the caller gives.
 
 ## Configuration
 
@@ -205,8 +204,8 @@ runs/<run id>/
 ## Interface
 
 ```bash
-acp-council run --mode blind --members top --dir ./task --question question.md --items items.json --schema vote.json
-acp-council run --mode discuss --members opus,astra --rounds 8 --dir ./task --question question.md --items items.json --schema vote.json
+acp-council run --mode blind --members top --dir ./folder --question question.md --items items.json --schema vote.json
+acp-council run --mode discuss --members opus,astra --rounds 8 --dir ./folder --question question.md --items items.json --schema vote.json
 acp-council show runs/<run id>
 ```
 

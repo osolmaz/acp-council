@@ -8,10 +8,8 @@ date: 2026-10-15
 
 ## TL;DR
 
-Build the [specification](SPEC.md) in seven milestones, M0 to M6. Each milestone ends with tests that pass
-without model calls, except the smoke tests of real adapters. The stack follows Onur's TypeScript defaults
-(`ts-defaults`). The first real use is a `discuss` review of the 123 planted defects of the Legal Benchmarks
-execution-version pilot by Claude Opus 5.5 and GPT-6 Astra.
+Build the [specification](SPEC.md) in six milestones, M0 to M5. Each milestone ends with tests that pass without
+model calls, except the smoke tests of real adapters.
 
 ## Stack
 
@@ -78,15 +76,6 @@ execution-version pilot by Claude Opus 5.5 and GPT-6 Astra.
 - Per-run limits: rounds, turns, time, and token totals from the adapters' reports.
 - A key scan before any upload, and a backup hook.
 - Done when tests cover a stop at each limit and a blocked upload.
-
-### M6: first use
-
-- Review the 123 planted defects of the Legal Benchmarks execution-version pilot (`legalbenchmarks/dev`,
-  `datasets/execution-version`) with the `top` tier, Claude Opus 5.5 and GPT-6 Astra, in `discuss` mode: keep,
-  fix or drop for each defect and its rubric item. The blind round gives the blind result, and the discussion
-  covers only the splits.
-- Score the blind votes and the final votes on the Legal Benchmarks defect eval, which holds a person's decisions
-  on flagged defects, before choosing a default mode for that project.
 
 ## Risks
 

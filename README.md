@@ -33,7 +33,7 @@ Specification stage. Nothing is implemented yet.
 ## Planned interface
 
 ```bash
-acp-council run --mode discuss --members top --dir ./task --question question.md --items items.json --schema vote.json
+acp-council run --mode discuss --members top --dir ./folder --question question.md --items items.json --schema vote.json
 ```
 
 The first members are Claude Code, Codex and Pi.
