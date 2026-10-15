@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="acp-council: ask a council of coding agents">
+  <rect width="1280" height="320" fill="#F0EEE6"/>
+  <g transform="translate(200 160)">
+    <circle r="92" fill="none" stroke="#D97757" stroke-width="6"/>
+    <circle r="40" fill="#D97757"/>
+    <g fill="#141413">
+      <circle cx="0" cy="-92" r="18"/>
+      <circle cx="87.5" cy="-28.4" r="18"/>
+      <circle cx="54.1" cy="74.4" r="18"/>
+      <circle cx="-54.1" cy="74.4" r="18"/>
+      <circle cx="-87.5" cy="-28.4" r="18"/>
+    </g>
+    <g stroke="#D97757" stroke-width="3" stroke-dasharray="4 8">
+      <line x1="0" y1="-70" x2="0" y2="-44"/>
+      <line x1="66.6" y1="-21.6" x2="38" y2="-12.4"/>
+      <line x1="41.1" y1="56.6" x2="23.5" y2="32.4"/>
+      <line x1="-41.1" y1="56.6" x2="-23.5" y2="32.4"/>
+      <line x1="-66.6" y1="-21.6" x2="-38" y2="-12.4"/>
+    </g>
+  </g>
+  <text x="380" y="160" font-family="Georgia, 'Times New Roman', serif" font-size="88" fill="#141413">acp-council</text>
+  <text x="384" y="214" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#5E5D59">Ask a council of coding agents. Over ACP.</text>
+  <text x="384" y="262" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#D97757">Built with Claude Code</text>
+</svg>
