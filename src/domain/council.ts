@@ -1,4 +1,5 @@
 import { countRound } from "./count.ts";
+import { MODES } from "./modes.ts";
 import type { CouncilResult, Item, ItemResult, ItemVote, MemberItemRecord, Mode, Rule, Vote } from "./types.ts";
 
 export type CouncilSpec = {
@@ -34,12 +35,8 @@ export function startCouncil(spec: CouncilSpec): CouncilState {
   };
 }
 
-function lastRound(spec: CouncilSpec): number {
-  return spec.mode === "blind" ? 1 : 1 + spec.rounds;
-}
-
 export function nextRound(state: CouncilState): NextRound | null {
-  if (state.open.length === 0 || state.round >= lastRound(state.spec)) {
+  if (state.open.length === 0 || state.round >= MODES[state.spec.mode].lastRound(state.spec.rounds)) {
     return null;
   }
   return { round: state.round + 1, openItems: [...state.open] };

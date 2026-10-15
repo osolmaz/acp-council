@@ -14,8 +14,8 @@ export type TurnPrompt = {
   intro?: Intro;
   /** Messages the member may see that are new to this session. */
   messages: Message[];
-  round: number;
-  openItems: string[];
+  /** What the mode asks for in this round. */
+  instruction: string;
   /** The member's own label, so that its own earlier messages are marked as its own. */
   label: string;
 };
@@ -28,11 +28,6 @@ function formatChoices(schema: VoteSchema): string {
   const choices =
     schema.choices === null ? "" : `Allowed choices: ${schema.choices.map((c) => `\`${c}\``).join(", ")}.\n\n`;
   return `${choices}Each item's vote must match this JSON Schema:\n\n\`\`\`json\n${JSON.stringify(schema.jsonSchema, null, 2)}\n\`\`\``;
-}
-
-function voteExample(openItems: string[]): string {
-  const example = Object.fromEntries(openItems.map((id) => [id, { choice: "...", reason: "..." }]));
-  return `\`\`\`json\n${JSON.stringify(example, null, 2)}\n\`\`\``;
 }
 
 export function formatIntro(intro: Intro): string {
@@ -57,18 +52,6 @@ export function formatMessage(message: Message, label: string): string {
   return `### ${author}, round ${message.round}\n\n${message.body.trim()}${votes}`;
 }
 
-function instruction(round: number, openItems: string[]): string {
-  const ids = openItems.map((id) => `\`${id}\``).join(", ");
-  if (round === 1) {
-    return `## Round 1\n\nThis round is blind: you do not see the other members' answers. Vote on every item: ${ids}.\n\nEnd your reply with the vote block, for example:\n\n${voteExample(openItems)}`;
-  }
-  return [
-    `## Round ${round}`,
-    `These items are still open: ${ids}. Read the other members' messages. Reply to their arguments, then vote again on each open item. You can keep your vote or change it. If you change a vote, say why in its reason.`,
-    `End your reply with the vote block for the open items only, for example:\n\n${voteExample(openItems)}`,
-  ].join("\n\n");
-}
-
 export function buildTurnPrompt(prompt: TurnPrompt): string {
   const parts: string[] = [];
   if (prompt.intro !== undefined) {
@@ -77,7 +60,7 @@ export function buildTurnPrompt(prompt: TurnPrompt): string {
   if (prompt.messages.length > 0) {
     parts.push(`## Messages\n\n${prompt.messages.map((m) => formatMessage(m, prompt.label)).join("\n\n")}`);
   }
-  parts.push(instruction(prompt.round, prompt.openItems));
+  parts.push(prompt.instruction);
   return parts.join("\n\n");
 }
 

@@ -13,7 +13,9 @@ import {
   type ResolvedCouncil,
 } from "../config/load.ts";
 import { itemsFileSchema } from "../config/schema.ts";
-import { RunError, runCouncil, type Progress } from "../run/runner.ts";
+import { RunError } from "../run/errors.ts";
+import type { Progress } from "../run/rounds.ts";
+import { runCouncil } from "../run/runner.ts";
 import { VERSION } from "../meta/version.ts";
 
 export type Io = {
