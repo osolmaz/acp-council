@@ -1,12 +1,12 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { planLaunch } from "../src/acp/agents.ts";
-import { MemberConnection, type MemberSpec } from "../src/acp/client.ts";
+import { planLaunch } from "../src/agents/registry.ts";
+import { AcpSession, type SessionSpec } from "../src/acp/session.ts";
 import type { MemberConfig } from "../src/config/schema.ts";
 import { fakeMember, folderWith, readLog, tempDir, type FakeScript } from "./helpers.ts";
 
-type Opened = { member: MemberConnection; log: string; events: Record<string, unknown>[]; stderr: string[] };
+type Opened = { member: AcpSession; log: string; events: Record<string, unknown>[]; stderr: string[] };
 
 async function open(script: FakeScript, extra: Partial<MemberConfig> = {}, model?: string): Promise<Opened> {
   const dir = await tempDir();
@@ -15,7 +15,7 @@ async function open(script: FakeScript, extra: Partial<MemberConfig> = {}, model
   const { config, log } = await fakeMember(dir, "m", script, extra);
   const events: Record<string, unknown>[] = [];
   const stderr: string[] = [];
-  const spec: MemberSpec = {
+  const spec: SessionSpec = {
     label: "member:A",
     plan: await planLaunch(config, "read", dir),
     model,
@@ -24,14 +24,14 @@ async function open(script: FakeScript, extra: Partial<MemberConfig> = {}, model
     permissions: "read",
     startTimeoutMs: 20_000,
   };
-  const member = await MemberConnection.open(spec, {
+  const member = await AcpSession.open(spec, {
     onEvent: (event) => events.push(event),
     onStderr: (chunk) => stderr.push(chunk),
   });
   return { member, log, events, stderr };
 }
 
-describe("MemberConnection", () => {
+describe("AcpSession", () => {
   it("opens a session, sets the model and options, and collects the reply", async () => {
     const { member, log, events } = await open(
       { models: ["small", "large"], rounds: { "1": { reply: "hello world", totalTokens: 12 } } },
@@ -104,7 +104,7 @@ describe("MemberConnection", () => {
   it("fails to open a command that does not exist or is empty", async () => {
     await expect(open({}, { command: ["/nonexistent/adapter"] })).rejects.toThrow("could not start");
     const dir = await tempDir();
-    const spec: MemberSpec = {
+    const spec: SessionSpec = {
       label: "member:A",
       plan: { ...(await planLaunch({ command: ["x"] }, "read", dir)), command: [] },
       model: undefined,
@@ -113,8 +113,8 @@ describe("MemberConnection", () => {
       permissions: "read",
       startTimeoutMs: 1000,
     };
-    await expect(MemberConnection.open(spec, { onEvent: () => undefined, onStderr: () => undefined })).rejects.toThrow(
-      "empty command",
+    await expect(AcpSession.open(spec, { onEvent: () => undefined, onStderr: () => undefined })).rejects.toThrow(
+      "the adapter command is empty",
     );
   });
 });

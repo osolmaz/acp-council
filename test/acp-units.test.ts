@@ -3,9 +3,10 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { RequestPermissionRequest, SessionConfigOption } from "@agentclientprotocol/sdk";
 import { describe, expect, it } from "vitest";
-import { ADAPTERS, planLaunch } from "../src/acp/agents.ts";
-import { findModelOption, planOptions, selectValues } from "../src/acp/options.ts";
-import { choosePermission, readInside, sliceLines } from "../src/acp/policy.ts";
+import { AGENTS, planLaunch } from "../src/agents/registry.ts";
+import { findModelOption, planOptions, selectValues } from "../src/acp/config-options.ts";
+import { readInside, sliceLines } from "../src/acp/filesystem.ts";
+import { choosePermission } from "../src/acp/permissions.ts";
 import { copyFolder, hashFolder, scanForKeys } from "../src/run/files.ts";
 import { tempDir } from "./helpers.ts";
 
@@ -131,7 +132,7 @@ describe("file reads", () => {
 describe("agent profiles", () => {
   it("runs Claude Code with no setting sources and read tools", async () => {
     const plan = await planLaunch({ agent: "claude", model: "opus" }, "read", await tempDir());
-    expect(plan.command).toEqual(["npx", "-y", ADAPTERS.claude]);
+    expect(plan.command).toEqual(["npx", "-y", AGENTS.claude.adapter]);
     expect(plan.sessionMeta).toEqual({
       claudeCode: { options: { settingSources: [], tools: ["Read", "Grep", "Glob"] } },
     });

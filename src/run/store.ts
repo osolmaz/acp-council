@@ -52,9 +52,23 @@ export class RunStore {
   }
 
   async init(labels: string[]): Promise<void> {
+    await mkdir(this.dir, { recursive: true });
     for (const label of labels) {
       await mkdir(join(this.memberDir(label), "turns"), { recursive: true });
     }
+  }
+
+  /** Every saved round of every member, for resuming a run. */
+  async loadAllRounds(labels: string[]): Promise<RoundRecord[]> {
+    return (await Promise.all(labels.map((label) => this.loadRounds(label)))).flat();
+  }
+
+  /** A logger that writes one JSON line per event, with the time, to a member's `events.ndjson`. */
+  eventLog(label: string): (event: Record<string, unknown>) => void {
+    const write = this.log(label, "events.ndjson");
+    return (event) => {
+      write(`${JSON.stringify({ at: new Date().toISOString(), ...event })}\n`);
+    };
   }
 
   async writeJson(name: string, value: unknown): Promise<void> {
