@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  SLOPHAMMER_VERSION: 0.5.0
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run format:check
+      - run: pnpm run lint
+      - run: pnpm run typecheck
+      - run: pnpm run test
+      - run: pnpm run coverage
+      - run: pnpm run build
+      - run: pnpm audit --prod
+      - run: pnpm run mutate
+      - run: npx --yes "slophammer-ts@${SLOPHAMMER_VERSION}" dry .
+      - run: npx --yes "slophammer-ts@${SLOPHAMMER_VERSION}" check .
