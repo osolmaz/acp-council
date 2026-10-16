@@ -4,7 +4,13 @@ import { join } from "node:path";
 import type { RequestPermissionRequest, SessionConfigOption } from "@agentclientprotocol/sdk";
 import { describe, expect, it } from "vitest";
 import { AGENTS, planLaunch } from "../src/agents/registry.ts";
-import { findModelOption, planOptions, selectValues } from "../src/acp/config-options.ts";
+import {
+  appliedChoice,
+  describeValues,
+  findModelOption,
+  planOptions,
+  selectValues,
+} from "../src/acp/config-options.ts";
 import { readInside, sliceLines } from "../src/acp/filesystem.ts";
 import { choosePermission } from "../src/acp/permissions.ts";
 import { copyFolder, hashFolder, scanForKeys } from "../src/run/files.ts";
@@ -53,18 +59,27 @@ describe("config options", () => {
     expect(findModelOption([effort])).toBeUndefined();
   });
 
-  it("matches a value or a display name", () => {
+  it("sends an offered value, the value of a display name, or the requested text", () => {
     expect(planOptions([model, effort], "Opus 5.5", { effort: "low" })).toEqual([
-      { configId: "model", value: "opus", name: "Opus 5.5" },
-      { configId: "effort", value: "low", name: "Low" },
+      { configId: "model", requested: "Opus 5.5", value: "opus" },
+      { configId: "effort", requested: "low", value: "low" },
+    ]);
+    expect(planOptions([model], "claude-opus-5-5", {})).toEqual([
+      { configId: "model", requested: "claude-opus-5-5", value: "claude-opus-5-5" },
     ]);
     expect(planOptions([model], undefined, {})).toEqual([]);
   });
 
-  it("explains what the agent offers when a value is wrong", () => {
-    expect(() => planOptions([model], "gpt", {})).toThrow("it offers: opus (Opus 5.5), sonnet (Sonnet 5.5)");
+  it("fails when the agent has no such option", () => {
     expect(() => planOptions([effort], "opus", {})).toThrow("has no model option");
     expect(() => planOptions([model], undefined, { mode: "x" })).toThrow("has no config option mode; it has: model");
+  });
+
+  it("reads back what the agent set, with its display name", () => {
+    const request = { configId: "model", requested: "claude-opus-5-5", value: "claude-opus-5-5" };
+    expect(appliedChoice(request, [model])).toEqual({ ...request, value: "opus", name: "Opus 5.5" });
+    expect(appliedChoice(request, [])).toEqual({ ...request, name: "claude-opus-5-5" });
+    expect(describeValues(model)).toBe("opus (Opus 5.5), sonnet (Sonnet 5.5)");
   });
 });
 
