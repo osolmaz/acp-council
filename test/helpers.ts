@@ -23,6 +23,7 @@ export type FakeScript = {
   rounds?: Record<string, FakeEntry>;
   nudge?: FakeEntry;
   failSessionNew?: boolean;
+  crashOnSetConfig?: boolean;
 };
 
 const created: string[] = [];
