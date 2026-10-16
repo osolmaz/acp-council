@@ -7,8 +7,8 @@ https://github.com/osolmaz/yodel-grotesk (assets/fonts/yodel-grotesk). MONO_DIR 
 DejaVuSansMono-Bold.ttf. Each string is shaped with HarfBuzz, so kerning and ligatures survive, and each glyph is
 drawn at the position HarfBuzz returns. The SVG has no text elements and needs no font.
 
-The picture: a terminal in a small project, with a real `acp-jury run` and its real output. Three agents vote on
-three items about the project's code, and the jury reports how many items they agreed on.
+The picture: a terminal in a small project, with a real `acp-jury run` and its real output. Three members vote on
+three items about the project's code, discuss the one item they split on, and agree on it in round 2.
 """
 
 from __future__ import annotations
@@ -38,18 +38,22 @@ LABEL = "#6E6A62"
 BAR = "#EBE7DE"
 
 NAME = "acp-jury"
-TAGLINE = ["An LLM jury made of coding agents.", "They vote alone, then discuss the splits."]
+TAGLINE = ["An LLM jury whose members are coding", "agents, such as Claude Code, Codex and Pi."]
 
 # The real session: `acp-jury run` in a small project, with its real output (stderr, then stdout).
 PROMPT = "$ "
-COMMAND = " run review --dir src --question question.md --items items.json"
+COMMAND = " run review --dir src --items items.json --run-id demo"
 OUTPUT = [
     "round 1: open items mean, empty, fix",
-    "round 1: member:C (deepseek-v4.1-flash) voted",
     "round 1: member:A (claude-opus-5-5) voted",
+    "round 1: member:C (deepseek-v4.1-flash) voted",
     "round 1: member:B (gpt-6-astra) voted",
-    "run 20261016T044944Z-41fabb: 3 agreed, 0 split after 1 round(s) (all_agreed)",
-    "report: .acp-jury/runs/20261016T044944Z-41fabb/report.md",
+    "round 2: open items fix",
+    "round 2: member:C (deepseek-v4.1-flash) voted",
+    "round 2: member:A (claude-opus-5-5) voted",
+    "round 2: member:B (gpt-6-astra) voted",
+    "run demo: 3 agreed, 0 split after 2 round(s) (all_agreed)",
+    "report: .acp-jury/runs/demo/report.md",
 ]
 
 
@@ -208,7 +212,7 @@ def window(label_font: Font, x: float, y: float, w: float, h: float, title: str,
 
 
 MONO_SIZE = 9.2
-LINE = 20.0
+LINE = 15.0
 PAD = 14.0
 
 
@@ -228,11 +232,6 @@ def terminal(mono: Font, mono_bold: Font, x: float, y: float, w: float) -> str:
     ]
     for i, line in enumerate(OUTPUT, start=1):
         parts.append(path(mono, line, left, first + i * LINE, MONO_SIZE, SECONDARY))
-    # the shell is back at its prompt when the run ends
-    last = first + (len(OUTPUT) + 1) * LINE
-    cursor_x = left + advance(mono, PROMPT, MONO_SIZE)
-    parts.append(path(mono, PROMPT.strip(), left, last, MONO_SIZE, LABEL))
-    parts.append(f'<rect x="{cursor_x:.1f}" y="{last - MONO_SIZE:.1f}" width="5.5" height="{MONO_SIZE + 2:.1f}" fill="{LABEL}"/>')
     return "".join(parts)
 
 
@@ -251,7 +250,7 @@ def build(yodel_dir: Path, mono_dir: Path) -> str:
     term_x = WIDTH - 64 - term_w - 0.5  # the window's border is centered on its edge; keep all of it inside
     assert text_right <= term_x - 32, f"text block runs into the window: {text_right:.1f} > {term_x - 32:.1f}"
 
-    body_h = 2 * PAD + MONO_SIZE + LINE * (len(OUTPUT) + 1)
+    body_h = 2 * PAD + MONO_SIZE + LINE * len(OUTPUT)
     term_h = 24 + body_h
     term_y = round((HEIGHT - term_h) / 2, 1)
     assert term_y >= 52, f"window too tall for the margins: top {term_y}"

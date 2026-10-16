@@ -1,15 +1,15 @@
-<p align="center"><img src="assets/cover.svg" alt="acp-jury: An LLM jury made of coding agents. They vote alone, then discuss the splits." width="100%"></p>
+<p align="center"><img src="assets/cover.svg" alt="acp-jury: An LLM jury whose members are coding agents, such as Claude Code, Codex and Pi." width="100%"></p>
 
 # acp-jury
 
-acp-jury is an LLM jury made of coding agents. Claude Code, Codex and Pi each answer your question with their own
-tools and vote on every item you list, and you get a report of where they agree and where they split. It runs from
-the command line or as a TypeScript library.
+acp-jury is an LLM jury whose members are coding agents, such as Claude Code, Codex and Pi. Each member answers the
+same question with its own tools, and when their answers differ, the members read each other's answers and answer
+again. It runs from the command line or as a TypeScript library.
 
 In `blind` mode, each agent votes alone. In `discuss` mode, the agents vote alone first, then read each other's
 arguments and vote again on the items they disagree on, for 5 rounds or as many as you set. Items that stay split
 go to you.
-The agents see each other only as `member:A`, `member:B` and so on, and each one works in its own copy of the
+The agents see each other only by anonymous labels such as `member:A`. Each one works in its own copy of the
 folder, so your folder never changes.
 
 ## Requirements
@@ -76,15 +76,16 @@ acp-jury reads two folders:
 | `~/.acp-jury/` (or `ACP_JURY_HOME`, or `--config-dir`) | `members.json`, because members depend on the agents and logins of your machine |
 | the nearest `.acp-jury/` from the working folder upward | `juries/<name>.json`, so that everyone on a project runs the same jury |
 
-Either folder can hold either file. When both have a file with the same name, the repository file wins, and the
-files are not merged. `acp-jury juries` lists every jury and the file it comes from.
+Either folder can hold either file. When both have a file with the same name, the repository file wins. The files
+are not merged. `acp-jury juries` lists every jury and the file it comes from.
 
 A member has an `agent` (`claude`, `codex` or `pi`) and a `model`. It can also set other agent `options`, such as a
 reasoning effort, or replace the adapter `command`. A Pi member can list the `extensions` to load, such as a model
 provider.
 
-A jury has a `mode` (`blind` or `discuss`) and `members`. It can also set `rounds` (at least 5), a `rule`
-(`unanimous` or `majority`), a JSON Schema file for one item's vote, a default question, and time and token limits.
+A jury has a `mode` (`blind` or `discuss`) and `members`. It can also set `rounds` (at least 5) and a `rule`
+(`unanimous` or `majority`). A jury file can also name a JSON Schema for one item's vote and a default question, and
+it can limit how long and how many tokens a run may use.
 The [specification](docs/SPEC.md#configuration) lists every field.
 
 `--mode`, `--members`, `--rounds` and `--rule` change a jury for one run.
@@ -98,21 +99,21 @@ Each run gets its own folder under `runs/`, next to the configuration that holds
 | `report.md` | the split items first, then the agreed items, with each member's first and final vote and reason |
 | `result.json` | the same, as data |
 | `board.jsonl` | every message the members posted |
-| `run.json` | the question, the jury, which label is which model, and the adapter versions |
+| `run.json` | the question and the jury, with the model behind each label and the adapter versions |
 | `members/<label>/` | every prompt, answer and ACP event of each member |
 
 A rerun with the same `--run-id` resumes a stopped run and skips the turns that are already saved.
 
 ## Your own instructions
 
-acp-jury runs each agent without your own instructions, skills and extensions when the agent allows it, and
-says so in `run.json` when it does not:
+acp-jury runs each agent without your own instructions and skills when the agent allows it. When an agent does not
+allow it, `run.json` says so:
 
 | Agent | Runs without your instructions |
 | --- | --- |
 | Claude Code | yes |
 | Pi | yes |
-| Codex | no: Codex keeps your login and your instructions in the same folder, and acp-jury does not copy logins |
+| Codex | no, because Codex keeps your login and your instructions in the same folder, and acp-jury does not copy logins |
 
 ## Use from TypeScript
 
