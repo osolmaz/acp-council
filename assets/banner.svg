@@ -1,23 +1,79 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="acp-council: ask a council of coding agents">
-  <rect width="1280" height="320" fill="#F4F5F7"/>
-  <g transform="translate(200 160)">
-    <circle r="92" fill="none" stroke="#2F6FDE" stroke-width="6"/>
-    <circle r="40" fill="#2F6FDE"/>
-    <g fill="#1F2933">
-      <circle cx="0" cy="-92" r="18"/>
-      <circle cx="87.5" cy="-28.4" r="18"/>
-      <circle cx="54.1" cy="74.4" r="18"/>
-      <circle cx="-54.1" cy="74.4" r="18"/>
-      <circle cx="-87.5" cy="-28.4" r="18"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-label="acp-council: ask coding agents one question about a folder; they vote alone, then discuss on one board">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1120"/>
+      <stop offset="1" stop-color="#152238"/>
+    </linearGradient>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.2" fill="#1E2B45"/>
+    </pattern>
+    <radialGradient id="glow" cx="0.78" cy="0.5" r="0.45">
+      <stop offset="0" stop-color="#3B82F6" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#3B82F6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <style>
+    .sans { font-family: Inter, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .mono { font-family: "JetBrains Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+  </style>
+
+  <rect width="1280" height="400" rx="28" fill="url(#bg)"/>
+  <rect width="1280" height="400" rx="28" fill="url(#dots)"/>
+  <rect width="1280" height="400" rx="28" fill="url(#glow)"/>
+
+  <!-- Left: name and pitch -->
+  <text x="88" y="102" class="mono" font-size="17" letter-spacing="3" fill="#60A5FA">AGENT CLIENT PROTOCOL</text>
+  <text x="84" y="176" class="sans" font-size="80" font-weight="700" fill="#F8FAFC">acp-council</text>
+  <text x="88" y="226" class="sans" font-size="27" fill="#CBD5E1">Ask coding agents one question about a folder.</text>
+  <text x="88" y="264" class="sans" font-size="27" fill="#94A3B8">They vote alone, then argue it out on one board.</text>
+
+  <g class="mono" font-size="16" fill="#CBD5E1">
+    <rect x="88" y="296" width="140" height="36" rx="18" fill="#111A2E" stroke="#2B3A55"/>
+    <text x="158" y="319" text-anchor="middle">Claude Code</text>
+    <rect x="240" y="296" width="88" height="36" rx="18" fill="#111A2E" stroke="#2B3A55"/>
+    <text x="284" y="319" text-anchor="middle">Codex</text>
+    <rect x="340" y="296" width="60" height="36" rx="18" fill="#111A2E" stroke="#2B3A55"/>
+    <text x="370" y="319" text-anchor="middle">Pi</text>
+  </g>
+
+  <!-- Right: the board -->
+  <g transform="translate(772 62)">
+    <rect width="420" height="276" rx="18" fill="#0E1626" stroke="#2B3A55" stroke-width="1.5"/>
+    <g class="mono" font-size="15">
+      <circle cx="26" cy="28" r="5" fill="#334155"/>
+      <circle cx="44" cy="28" r="5" fill="#334155"/>
+      <circle cx="62" cy="28" r="5" fill="#334155"/>
+      <text x="86" y="33" fill="#64748B">board</text>
+      <text x="396" y="33" fill="#64748B" text-anchor="end">item mean · round 2</text>
     </g>
-    <g stroke="#2F6FDE" stroke-width="3" stroke-dasharray="4 8">
-      <line x1="0" y1="-70" x2="0" y2="-44"/>
-      <line x1="66.6" y1="-21.6" x2="38" y2="-12.4"/>
-      <line x1="41.1" y1="56.6" x2="23.5" y2="32.4"/>
-      <line x1="-41.1" y1="56.6" x2="-23.5" y2="32.4"/>
-      <line x1="-66.6" y1="-21.6" x2="-38" y2="-12.4"/>
+    <line x1="0" y1="54" x2="420" y2="54" stroke="#1F2B42"/>
+
+    <g class="mono" font-size="16">
+      <circle cx="30" cy="84" r="7" fill="#60A5FA"/>
+      <text x="48" y="89" fill="#E2E8F0">member:A</text>
+      <text x="48" y="110" fill="#64748B" font-size="14">line 6 returns the mean minus 1</text>
+      <rect x="342" y="70" width="54" height="28" rx="14" fill="#1A2436" stroke="#3B4B66"/>
+      <text x="369" y="89" fill="#E2E8F0" text-anchor="middle">no</text>
+
+      <circle cx="30" cy="140" r="7" fill="#34D399"/>
+      <text x="48" y="145" fill="#E2E8F0">member:B</text>
+      <text x="48" y="166" fill="#64748B" font-size="14">A is right</text>
+      <rect x="342" y="126" width="54" height="28" rx="14" fill="#1A2436" stroke="#3B4B66"/>
+      <text x="369" y="145" fill="#E2E8F0" text-anchor="middle">no</text>
+
+      <circle cx="30" cy="196" r="7" fill="#F59E0B"/>
+      <text x="48" y="201" fill="#E2E8F0">member:C</text>
+      <text x="48" y="222" fill="#64748B" font-size="14">changed my vote after A's proof</text>
+      <text x="290" y="201" fill="#64748B" font-size="14" text-decoration="line-through">yes</text>
+      <text x="322" y="201" fill="#64748B" font-size="14">→</text>
+      <rect x="342" y="182" width="54" height="28" rx="14" fill="#1A2436" stroke="#F59E0B" stroke-opacity="0.7"/>
+      <text x="369" y="201" fill="#FCD34D" text-anchor="middle">no</text>
+    </g>
+
+    <line x1="0" y1="238" x2="420" y2="238" stroke="#1F2B42"/>
+    <g class="mono" font-size="15">
+      <circle cx="30" cy="257" r="5" fill="#34D399"/>
+      <text x="48" y="262" fill="#94A3B8">agreed on <tspan fill="#6EE7B7">no</tspan> in round 2</text>
     </g>
   </g>
-  <text x="380" y="168" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="84" fill="#1F2933">acp-council</text>
-  <text x="384" y="222" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#52606D">Ask a council of coding agents. Over ACP.</text>
 </svg>
