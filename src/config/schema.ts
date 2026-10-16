@@ -10,7 +10,7 @@ export const memberSchema = z
     agent: z.enum(AGENT_NAMES).optional(),
     /** The adapter command. It replaces the built-in command, for example to pin another adapter version. */
     command: z.array(z.string().min(1)).min(1).optional(),
-    /** A value of the agent's model option, or its display name. */
+    /** The model ID with its version, such as `claude-opus-5-5`. The agent resolves it. */
     model: z.string().min(1).optional(),
     /** Other session config options of the agent, such as a reasoning effort. */
     options: z.record(z.string(), z.string()).optional(),

@@ -1,6 +1,10 @@
 import type { SessionConfigOption, SessionConfigSelectOption } from "@agentclientprotocol/sdk";
 
-export type OptionChoice = { configId: string; value: string; name: string };
+/** A value to send for one config option, and the text the member asked for. */
+export type OptionRequest = { configId: string; requested: string; value: string };
+
+/** What the agent reports after it set an option: its current value and that value's display name. */
+export type OptionChoice = OptionRequest & { name: string };
 
 export function selectValues(option: SessionConfigOption): SessionConfigSelectOption[] {
   if (option.type !== "select") {
@@ -9,24 +13,21 @@ export function selectValues(option: SessionConfigOption): SessionConfigSelectOp
   return option.options.flatMap((entry) => ("group" in entry ? entry.options : [entry]));
 }
 
-function matchValue(option: SessionConfigOption, wanted: string): SessionConfigSelectOption | undefined {
-  const values = selectValues(option);
-  const lower = wanted.toLowerCase();
-  return values.find((value) => value.value === wanted) ?? values.find((value) => value.name.toLowerCase() === lower);
-}
-
-function describe(option: SessionConfigOption): string {
+export function describeValues(option: SessionConfigOption): string {
   return selectValues(option)
     .map((value) => `${value.value} (${value.name})`)
     .join(", ");
 }
 
-function choose(option: SessionConfigOption, wanted: string): OptionChoice {
-  const match = matchValue(option, wanted);
-  if (match === undefined) {
-    throw new Error(`the agent does not offer ${wanted} for ${option.id}; it offers: ${describe(option)}`);
-  }
-  return { configId: option.id, value: match.value, name: match.name };
+/**
+ * The value to send: an offered value as is, the value of an offered display name, or else the requested text
+ * itself, which the agent may resolve, such as a full model ID that the agent lists under an alias.
+ */
+function toRequest(option: SessionConfigOption, requested: string): OptionRequest {
+  const lower = requested.toLowerCase();
+  const byName = selectValues(option).find((value) => value.name.toLowerCase() === lower);
+  const offered = selectValues(option).some((value) => value.value === requested);
+  return { configId: option.id, requested, value: offered || byName === undefined ? requested : byName.value };
 }
 
 export function findModelOption(options: SessionConfigOption[]): SessionConfigOption | undefined {
@@ -36,29 +37,35 @@ export function findModelOption(options: SessionConfigOption[]): SessionConfigOp
   return models.find((option) => option.id === "model") ?? models[0];
 }
 
-/**
- * Turns a member's model and options into config option values that the agent offers.
- * A value can be given as the option's value or as its display name.
- */
+/** Turns a member's model and options into the config option values to send to the agent. */
 export function planOptions(
   options: SessionConfigOption[],
   model: string | undefined,
   wanted: Record<string, string>,
-): OptionChoice[] {
-  const choices: OptionChoice[] = [];
+): OptionRequest[] {
+  const requests: OptionRequest[] = [];
   if (model !== undefined) {
     const modelOption = findModelOption(options);
     if (modelOption === undefined) {
       throw new Error(`the agent has no model option, so it cannot select ${model}`);
     }
-    choices.push(choose(modelOption, model));
+    requests.push(toRequest(modelOption, model));
   }
   for (const [configId, value] of Object.entries(wanted)) {
     const option = options.find((candidate) => candidate.id === configId);
     if (option === undefined) {
       throw new Error(`the agent has no config option ${configId}; it has: ${options.map((o) => o.id).join(", ")}`);
     }
-    choices.push(choose(option, value));
+    requests.push(toRequest(option, value));
   }
-  return choices;
+  return requests;
+}
+
+/** Reads back what the agent set for a request, from the config options it returned. */
+export function appliedChoice(request: OptionRequest, options: SessionConfigOption[]): OptionChoice {
+  const option = options.find((candidate) => candidate.id === request.configId);
+  const current = option?.type === "select" ? option.currentValue : request.value;
+  const name =
+    option === undefined ? current : (selectValues(option).find((v) => v.value === current)?.name ?? current);
+  return { ...request, value: current, name };
 }

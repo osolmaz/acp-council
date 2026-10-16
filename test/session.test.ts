@@ -42,8 +42,8 @@ describe("AcpSession", () => {
       agentName: "fake-agent",
       agentVersion: "1.0.0",
       options: [
-        { configId: "model", value: "large", name: "Fake large" },
-        { configId: "mode", value: "workspace-write", name: "Workspace" },
+        { configId: "model", requested: "large", value: "large", name: "Fake large" },
+        { configId: "mode", requested: "Workspace", value: "workspace-write", name: "Workspace" },
       ],
     });
     const outcome = await member.prompt("## Round 1", 10_000);
@@ -96,8 +96,18 @@ describe("AcpSession", () => {
     expect(events).toContainEqual(expect.objectContaining({ type: "write_denied" }));
   });
 
-  it("fails to open when the model is not offered or the session fails", async () => {
-    await expect(open({ models: ["small"] }, {}, "huge")).rejects.toThrow("does not offer huge");
+  it("records a model ID that the agent resolves to one of its values", async () => {
+    const { member } = await open({ models: ["small", "large"], aliases: { "large-2-0": "large" } }, {}, "large-2-0");
+    expect(member.info.options).toEqual([
+      { configId: "model", requested: "large-2-0", value: "large", name: "Fake large" },
+    ]);
+    await member.close();
+  });
+
+  it("fails to open when the agent refuses the model or the session fails", async () => {
+    const refused = open({ models: ["small"] }, {}, "huge");
+    await expect(refused).rejects.toThrow("the agent refused huge for model");
+    await expect(refused).rejects.toThrow("it offers: small (Fake small)");
     await expect(open({ failSessionNew: true })).rejects.toThrow("could not start");
   });
 

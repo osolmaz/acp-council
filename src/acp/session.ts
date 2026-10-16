@@ -3,7 +3,7 @@ import type { LaunchPlan, Permissions } from "../agents/profile.ts";
 import { VERSION } from "../meta/version.ts";
 import { errorMessage, settle, within } from "../util/async.ts";
 import { clientApp, Transcript } from "./client-app.ts";
-import { planOptions, type OptionChoice } from "./config-options.ts";
+import { appliedChoice, describeValues, planOptions, type OptionChoice } from "./config-options.ts";
 import { AgentProcess } from "./process.ts";
 
 export type SessionSpec = {
@@ -156,18 +156,7 @@ async function startSession(
     spec.startTimeoutMs,
     "session/new",
   );
-  const choices = planOptions(session.configOptions ?? [], spec.model, { ...spec.options, ...spec.plan.configOptions });
-  for (const choice of choices) {
-    await within(
-      connection.agent.request(acp.methods.agent.session.setConfigOption, {
-        sessionId: session.sessionId,
-        configId: choice.configId,
-        value: choice.value,
-      }),
-      spec.startTimeoutMs,
-      `session/set_config_option ${choice.configId}`,
-    );
-  }
+  const choices = await applyOptions(connection, spec, session.sessionId, session.configOptions ?? []);
   const info = {
     agentName: init.agentInfo?.name ?? null,
     agentVersion: init.agentInfo?.version ?? null,
@@ -175,4 +164,36 @@ async function startSession(
     options: choices,
   };
   return { sessionId: session.sessionId, info };
+}
+
+/**
+ * Sets the member's model and options, and reads back what the agent reports. An agent that refuses a value, such
+ * as an unknown model ID, fails the start with the values it offers.
+ */
+async function applyOptions(
+  connection: acp.ClientConnection,
+  spec: SessionSpec,
+  sessionId: string,
+  offered: acp.SessionConfigOption[],
+): Promise<OptionChoice[]> {
+  const choices: OptionChoice[] = [];
+  for (const request of planOptions(offered, spec.model, { ...spec.options, ...spec.plan.configOptions })) {
+    const response = await within(
+      connection.agent.request(acp.methods.agent.session.setConfigOption, {
+        sessionId,
+        configId: request.configId,
+        value: request.value,
+      }),
+      spec.startTimeoutMs,
+      `session/set_config_option ${request.configId}`,
+    ).catch((error: unknown) => {
+      const option = offered.find((candidate) => candidate.id === request.configId);
+      const values = option === undefined ? "" : `; it offers: ${describeValues(option)}`;
+      throw new Error(
+        `the agent refused ${request.requested} for ${request.configId} (${errorMessage(error)})${values}`,
+      );
+    });
+    choices.push(appliedChoice(request, response.configOptions));
+  }
+  return choices;
 }
