@@ -2,26 +2,22 @@
 
 # acp-council
 
-Ask a council of coding agents one question about a folder, and get their votes, their discussion and a full
-record of the run.
+acp-council is a command-line tool and TypeScript library that asks several coding agents the same question about a
+folder. Claude Code, Codex or Pi read the folder with their own tools, vote on each item you list, and you get a
+report that shows where they agree and where they split.
 
-Each member is a real agent, such as Claude Code, Codex or Pi, that reads the folder with its own tools.
-acp-council talks to the members over the [Agent Client Protocol](https://agentclientprotocol.com) (ACP). Members
-never talk to each other directly: every message goes through one board, and acp-council decides who sees what and
-when. A person makes the final decision; the council advises.
-
-## Modes
-
-| Mode | What happens |
-| --- | --- |
-| `blind` | Every member votes alone, and code counts the votes. |
-| `discuss` | Every member votes alone first. Then the members talk about the items they disagree on, and vote again, until they agree or a round limit (at least 5) is reached. Items that are still split go to a person. |
+In `blind` mode, each agent votes alone. In `discuss` mode, the agents vote alone first, then read each other's
+arguments and vote again on the items they disagree on, for 5 rounds or as many as you set. Items that stay split
+go to you.
+The agents see each other only as `member:A`, `member:B` and so on, and each one works in its own copy of the
+folder, so your folder never changes.
 
 ## Requirements
 
 - Node.js 22.18 or newer, and pnpm.
-- Each agent you use, installed and logged in: Claude Code, Codex, or Pi with the providers you need.
-  acp-council starts each agent's ACP adapter with `npx` and never copies a login.
+- Each agent you want to use, installed and logged in: Claude Code, Codex, or Pi with the providers you need.
+  acp-council starts each agent's [ACP](https://agentclientprotocol.com) adapter with `npx` and uses your existing
+  logins.
 
 ## Install
 
@@ -33,91 +29,92 @@ pnpm run build
 pnpm link --global
 ```
 
-## Set up a council
+## Quick start
 
-Name your members once, in `~/.acp-council/members.json`:
+1. Name your members in `~/.acp-council/members.json`:
 
-```json
-{
-  "opus": { "agent": "claude", "model": "opus" },
-  "astra": { "agent": "codex", "model": "gpt-6-astra", "options": { "reasoning_effort": "high" } }
-}
-```
+   ```json
+   {
+     "opus": { "agent": "claude", "model": "opus" },
+     "astra": { "agent": "codex", "model": "gpt-6-astra" }
+   }
+   ```
 
-`model` is a value from the agent's model list, or its display name. When the value is wrong, the error lists the
-models that the agent offers.
+   `model` is a value from the agent's model list, or its display name. When it is wrong, the error lists the
+   models that the agent offers.
 
-Then name a council in your repository, in `.acp-council/councils/review.json`, so that everyone runs the same one:
+2. Name a council in your repository, in `.acp-council/councils/review.json`:
 
-```json
-{ "mode": "discuss", "members": ["opus", "astra"], "schema": "review.schema.json" }
-```
+   ```json
+   { "mode": "discuss", "members": ["opus", "astra"] }
+   ```
 
-`review.schema.json`, next to it, is the JSON Schema for one item's vote:
+3. List the items to vote on in `items.json`:
 
-```json
-{
-  "type": "object",
-  "properties": { "choice": { "enum": ["yes", "no"] }, "reason": { "type": "string" } },
-  "required": ["choice", "reason"]
-}
-```
+   ```json
+   [
+     { "id": "mean", "text": "The function returns the mean of a non-empty list." },
+     { "id": "empty", "text": "Calling it with an empty list raises an exception." }
+   ]
+   ```
 
-Either level can hold either file. When both levels have a file with the same name, the repository file wins.
+4. Run the council, and read the report:
+
+   ```bash
+   acp-council run review --dir ./folder --question question.md --items items.json
+   acp-council show .acp-council/runs/<run id>
+   ```
+
+Without `--items`, the council votes once, on the item `answer`.
+
+## Configuration
+
+acp-council reads two folders:
+
+| Folder | Holds |
+| --- | --- |
+| `~/.acp-council/` (or `ACP_COUNCIL_HOME`, or `--config-dir`) | `members.json`, because members depend on the agents and logins of your machine |
+| the nearest `.acp-council/` from the working folder upward | `councils/<name>.json`, so that everyone on a project runs the same council |
+
+Either folder can hold either file. When both have a file with the same name, the repository file wins, and the
+files are not merged. `acp-council councils` lists every council and the file it comes from.
+
+A member has an `agent` (`claude`, `codex` or `pi`) and a `model`. It can also set other agent `options`, such as a
+reasoning effort, or replace the adapter `command`. A Pi member can list the `extensions` to load, such as a model
+provider.
+
+A council has a `mode` (`blind` or `discuss`) and `members`. It can also set `rounds` (at least 5), a `rule`
+(`unanimous` or `majority`), a JSON Schema file for one item's vote, a default question, and time and token limits.
 The [specification](docs/SPEC.md#configuration) lists every field.
 
-## Run it
+`--mode`, `--members`, `--rounds` and `--rule` change a council for one run.
 
-```bash
-acp-council run review --dir ./folder --question question.md --items items.json
-```
+## Results
 
-`items.json` lists what the council votes on:
-
-```json
-[
-  { "id": "bug", "text": "The function returns the mean of a non-empty list." },
-  { "id": "empty", "text": "Calling it with an empty list raises an exception." }
-]
-```
-
-Without `--items`, the council votes once, on the item `answer`. Each member works in its own copy of the folder;
-the folder itself never changes.
-
-```bash
-acp-council show .acp-council/runs/<run id>   # print the report
-acp-council councils                           # list the councils and where each one comes from
-```
-
-Flags such as `--mode`, `--members`, `--rounds` and `--rule` change a council for one run. A rerun with the same
-`--run-id` resumes a stopped run and skips the turns that are already saved.
-
-## What a run leaves
-
-Each run has its own folder, by default under the `runs/` folder next to the council's configuration:
+Each run gets its own folder under `runs/`, next to the configuration that holds the council, or under `--out`:
 
 | File | Contents |
 | --- | --- |
-| `report.md` | the split items first, then the agreed items, with every member's blind and final vote and reason |
-| `result.json` | the same, as data, with the stop reason |
+| `report.md` | the split items first, then the agreed items, with each member's first and final vote and reason |
+| `result.json` | the same, as data |
 | `board.jsonl` | every message the members posted |
-| `run.json` | the question, the resolved council, which label is which model, adapter versions and input hashes |
-| `members/<label>/` | each turn's prompts and answers, every ACP event, and the adapter's error output |
+| `run.json` | the question, the council, which label is which model, and the adapter versions |
+| `members/<label>/` | every prompt, answer and ACP event of each member |
 
-Members see each other only as `member:A`, `member:B` and so on.
+A rerun with the same `--run-id` resumes a stopped run and skips the turns that are already saved.
 
-## Clean members
+## Your own instructions
 
-acp-council runs each member without your own instructions, skills and extensions when the agent allows it, and
-records in `run.json` when it does not:
+acp-council runs each agent without your own instructions, skills and extensions when the agent allows it, and
+says so in `run.json` when it does not:
 
-| Agent | Clean | How |
-| --- | --- | --- |
-| Claude Code | yes | no setting sources: no settings, CLAUDE.md files or skills |
-| Pi | yes | no extensions, skills, context files or prompt templates; a member can list the extension files to load |
-| Codex | no | Codex keeps the login and your instructions in the same folder, and acp-council does not copy logins |
+| Agent | Runs without your instructions |
+| --- | --- |
+| Claude Code | yes |
+| Pi | yes |
+| Codex | no: Codex keeps your login and your instructions in the same folder, and acp-council does not copy logins |
 
-## Use it from TypeScript
+## Use from TypeScript
 
 ```ts
 import { configDirs, resolveCouncil, runCouncil } from "acp-council";
@@ -126,10 +123,6 @@ const dirs = await configDirs({ cwd: process.cwd(), env: process.env });
 const council = await resolveCouncil("review", dirs);
 const { result } = await runCouncil({ council, folder: "./folder", question: "Is it correct?", outDir: "./runs" });
 ```
-
-## Development
-
-See [AGENTS.md](AGENTS.md) for the checks to run, and [docs/SPEC.md](docs/SPEC.md) for the design.
 
 ## License
 
