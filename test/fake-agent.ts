@@ -24,6 +24,7 @@ type Script = {
   rounds?: Record<string, Entry>;
   nudge?: Entry;
   failSessionNew?: boolean;
+  crashOnSetConfig?: boolean;
 };
 
 const [scriptPath, logPath] = process.argv.slice(2);
@@ -148,6 +149,9 @@ acp
     return { sessionId: "fake-session", configOptions: configOptions() };
   })
   .onRequest(acp.methods.agent.session.setConfigOption, (ctx) => {
+    if (script.crashOnSetConfig === true) {
+      process.exit(4);
+    }
     if ("value" in ctx.params && typeof ctx.params.value === "string") {
       const value = resolveValue(ctx.params.configId, ctx.params.value);
       config[ctx.params.configId] = value;

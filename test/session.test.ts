@@ -109,6 +109,9 @@ describe("AcpSession", () => {
     await expect(refused).rejects.toThrow("the agent refused huge for model");
     await expect(refused).rejects.toThrow("it offers: small (Fake small)");
     await expect(open({ failSessionNew: true })).rejects.toThrow("could not start");
+    const crashed = open({ models: ["small"], crashOnSetConfig: true }, {}, "small");
+    await expect(crashed).rejects.toThrow("could not start");
+    await expect(crashed).rejects.not.toThrow("refused");
   });
 
   it("fails to open a command that does not exist or is empty", async () => {

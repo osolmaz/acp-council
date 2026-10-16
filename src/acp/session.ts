@@ -3,7 +3,7 @@ import type { LaunchPlan, Permissions } from "../agents/profile.ts";
 import { VERSION } from "../meta/version.ts";
 import { errorMessage, settle, within } from "../util/async.ts";
 import { clientApp, Transcript } from "./client-app.ts";
-import { appliedChoice, describeValues, planOptions, type OptionChoice } from "./config-options.ts";
+import { appliedChoice, describeValues, planOptions, type OptionChoice, type OptionRequest } from "./config-options.ts";
 import { AgentProcess } from "./process.ts";
 
 export type SessionSpec = {
@@ -187,13 +187,23 @@ async function applyOptions(
       spec.startTimeoutMs,
       `session/set_config_option ${request.configId}`,
     ).catch((error: unknown) => {
-      const option = offered.find((candidate) => candidate.id === request.configId);
-      const values = option === undefined ? "" : `; it offers: ${describeValues(option)}`;
-      throw new Error(
-        `the agent refused ${request.requested} for ${request.configId} (${errorMessage(error)})${values}`,
-      );
+      throw refusal(error, request, offered);
     });
     choices.push(appliedChoice(request, response.configOptions));
   }
   return choices;
+}
+
+/**
+ * Explains a failed `session/set_config_option`. A protocol error from the agent is a refusal of the value, and
+ * lists the offered values. A timeout or a closed connection is not a refusal, so it keeps its own message.
+ */
+function refusal(error: unknown, request: OptionRequest, offered: acp.SessionConfigOption[]): unknown {
+  if (!(error instanceof acp.RequestError)) {
+    return error;
+  }
+  const option = offered.find((candidate) => candidate.id === request.configId);
+  const values = option === undefined ? "" : describeValues(option);
+  const list = values === "" ? "" : `; it offers: ${values}`;
+  return new Error(`the agent refused ${request.requested} for ${request.configId} (${errorMessage(error)})${list}`);
 }
