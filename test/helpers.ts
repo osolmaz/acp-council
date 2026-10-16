@@ -19,6 +19,7 @@ export type FakeEntry = {
 
 export type FakeScript = {
   models?: string[];
+  aliases?: Record<string, string>;
   rounds?: Record<string, FakeEntry>;
   nudge?: FakeEntry;
   failSessionNew?: boolean;

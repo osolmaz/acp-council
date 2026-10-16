@@ -19,6 +19,8 @@ type Entry = {
 
 type Script = {
   models?: string[];
+  /** Model IDs that the agent resolves to one of its listed values, as the Claude adapter does. */
+  aliases?: Record<string, string>;
   rounds?: Record<string, Entry>;
   nudge?: Entry;
   failSessionNew?: boolean;
@@ -58,6 +60,17 @@ function configOptions(): acp.SessionConfigOption[] {
       ],
     },
   ];
+}
+
+/** Accepts a listed value or a known alias, and refuses anything else, as a real adapter does. */
+function resolveValue(configId: string, value: string): string {
+  const option = configOptions().find((candidate) => candidate.id === configId);
+  const listed = option?.type === "select" && option.options.some((entry) => "value" in entry && entry.value === value);
+  const resolved = listed ? value : configId === "model" ? script.aliases?.[value] : undefined;
+  if (resolved === undefined) {
+    throw new Error(`unknown value ${value} for ${configId}`);
+  }
+  return resolved;
 }
 
 function entryFor(prompt: string): Entry {
@@ -136,7 +149,8 @@ acp
   })
   .onRequest(acp.methods.agent.session.setConfigOption, (ctx) => {
     if ("value" in ctx.params && typeof ctx.params.value === "string") {
-      config[ctx.params.configId] = ctx.params.value;
+      const value = resolveValue(ctx.params.configId, ctx.params.value);
+      config[ctx.params.configId] = value;
       log({ setConfigOption: { [ctx.params.configId]: ctx.params.value } });
     }
     return { configOptions: configOptions() };

@@ -99,9 +99,12 @@ Every adapter version bump needs a smoke test with the real agent.
 - Built on the official TypeScript SDK, `@agentclientprotocol/sdk`, which acpx also uses. No dependency on acpx.
 - `AgentProcess` starts the adapter in its own process group, so that stopping it also stops the agent it started.
 - `AcpSession` sends `initialize`, opens a session with `session/new` in the member's folder, and sets the model and
-  other options with `session/set_config_option`. A model is given as a value that the agent offers, or as its
-  display name; an unknown value fails with the list of offered values. Turns use `session/prompt`; a turn past its
-  time limit gets `session/cancel`, and an agent that does not stop is stopped with its process.
+  other options with `session/set_config_option`. A model is given as its ID with the version, such as
+  `claude-opus-5-5`. acp-council sends the ID as is and lets the agent resolve it: the Claude adapter, for example,
+  lists Opus 5.5 under the value `opus` and maps `claude-opus-5-5` to it. `run.json` records the requested ID and
+  the value and name that the agent reports. An ID that the agent refuses fails the start with the list of offered
+  values. Turns use `session/prompt`; a turn past its time limit gets `session/cancel`, and an agent that does not
+  stop is stopped with its process.
 - File system: the client advertises read access only, inside the member's folder. Writes fail.
 - Permissions: read and search tools are allowed, plus commands under the `exec` permission level or when the agent
   profile allows them. Everything else is refused. A refusal uses an option that does not cancel the turn when the
@@ -240,9 +243,9 @@ There are two levels, as in Claude Code, Codex and Pi. Each level holds a differ
 
 ```json
 {
-  "opus": { "agent": "claude", "model": "opus" },
-  "astra": { "agent": "codex", "model": "gpt-6-astra", "options": { "reasoning_effort": "high" } },
-  "flash": {
+  "claude-opus-5-5": { "agent": "claude", "model": "claude-opus-5-5" },
+  "gpt-6-astra": { "agent": "codex", "model": "gpt-6-astra", "options": { "reasoning_effort": "high" } },
+  "deepseek-v4.1-flash": {
     "agent": "pi",
     "model": "huggingface/deepseek-ai/DeepSeek-V4.1-Flash",
     "extensions": ["~/.pi/agent/npm/node_modules/pi-huggingface-oauth/index.ts"]
@@ -254,14 +257,14 @@ There are two levels, as in Claude Code, Codex and Pi. Each level holds a differ
 | --- | --- |
 | `agent` | `claude`, `codex` or `pi`: a built-in agent profile |
 | `command` | the adapter command; it replaces the profile's `npx` command, for example to pin another adapter version, or makes a custom agent |
-| `model` | a value of the agent's model option, or its display name |
+| `model` | the model ID with its version, such as `claude-opus-5-5`; the agent resolves it, and `run.json` records the ID and the model the agent reports |
 | `options` | other session config options of the agent, by ID, such as a reasoning effort |
 | `extensions` | Pi only: the extension files to load; every other extension stays off |
 
 `councils/<name>.json`:
 
 ```json
-{ "mode": "discuss", "members": ["opus", "astra"], "rounds": 5, "rule": "unanimous", "schema": "review.schema.json", "question": "review.md" }
+{ "mode": "discuss", "members": ["claude-opus-5-5", "gpt-6-astra"], "rounds": 5, "rule": "unanimous", "schema": "review.schema.json", "question": "review.md" }
 ```
 
 | Field | Default | Meaning |
@@ -281,7 +284,7 @@ There are two levels, as in Claude Code, Codex and Pi. Each level holds a differ
 
 ```bash
 acp-council run review --dir ./folder --question question.md --items items.json
-acp-council run review --dir ./folder --mode blind --members opus,astra --rounds 8 --run-id my-run
+acp-council run review --dir ./folder --mode blind --members claude-opus-5-5,gpt-6-astra --rounds 8 --run-id my-run
 acp-council show <run folder>
 acp-council councils
 ```

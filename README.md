@@ -35,18 +35,18 @@ pnpm link --global
 
    ```json
    {
-     "opus": { "agent": "claude", "model": "opus" },
-     "astra": { "agent": "codex", "model": "gpt-6-astra" }
+     "claude-opus-5-5": { "agent": "claude", "model": "claude-opus-5-5" },
+     "gpt-6-astra": { "agent": "codex", "model": "gpt-6-astra" }
    }
    ```
 
-   `model` is a value from the agent's model list, or its display name. When it is wrong, the error lists the
-   models that the agent offers.
+   `model` is the model ID with its version. When the agent does not know the ID, the error lists the models that
+   the agent offers.
 
 2. Name a council in your repository, in `.acp-council/councils/review.json`:
 
    ```json
-   { "mode": "discuss", "members": ["opus", "astra"] }
+   { "mode": "discuss", "members": ["claude-opus-5-5", "gpt-6-astra"] }
    ```
 
 3. List the items to vote on in `items.json`:
