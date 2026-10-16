@@ -36,7 +36,7 @@ export class Transcript {
  */
 export function clientApp(policy: ClientPolicy, hooks: ClientHooks, transcript: Transcript): acp.ClientApp {
   return acp
-    .client({ name: "acp-council" })
+    .client({ name: "acp-jury" })
     .onRequest(acp.methods.client.session.requestPermission, (ctx) => {
       const response = choosePermission(ctx.params, policy.permissions, policy.allowKinds);
       hooks.onEvent({
@@ -52,7 +52,7 @@ export function clientApp(policy: ClientPolicy, hooks: ClientHooks, transcript: 
     }))
     .onRequest(acp.methods.client.fs.writeTextFile, (ctx) => {
       hooks.onEvent({ type: "write_denied", path: ctx.params.path });
-      throw new Error("acp-council members cannot write files");
+      throw new Error("acp-jury members cannot write files");
     })
     .onNotification(acp.methods.client.session.update, (ctx) => {
       const update = ctx.params.update;

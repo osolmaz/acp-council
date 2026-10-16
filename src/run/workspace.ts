@@ -12,7 +12,7 @@ export class Workspace {
   }
 
   static async create(): Promise<Workspace> {
-    return new Workspace(await mkdtemp(join(tmpdir(), "acp-council-")));
+    return new Workspace(await mkdtemp(join(tmpdir(), "acp-jury-")));
   }
 
   /** A member's private folder, with a fresh copy of the material in `folder/`. */

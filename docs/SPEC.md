@@ -1,16 +1,16 @@
-# acp-council specification
+# acp-jury specification
 
 ## TL;DR
 
-acp-council asks a council of coding agents one question about a folder and records how they answer. Each member
-is a real agent (Claude Code, Codex, Pi) that reads the folder with its own tools. acp-council talks to them over
+acp-jury asks a jury of coding agents one question about a folder and records how they answer. Each member
+is a real agent (Claude Code, Codex, Pi) that reads the folder with its own tools. acp-jury talks to them over
 the Agent Client Protocol (ACP). The members never talk to each other directly: every message goes through one
 board, and the runtime decides who sees what and when. There are two modes. In `blind`, each member votes alone.
 In `discuss`, each member votes alone first, and then the members talk about the items they disagree on until
-they agree or a round limit is reached. A person makes the final decision; the council advises.
+they agree or a round limit is reached. A person makes the final decision; the jury advises.
 
-A user names members once, in a user configuration folder, and names councils (a mode, members and rules) in a
-repository or in the user folder. Then `acp-council run <council> --dir <folder>` runs it.
+A user names members once, in a user configuration folder, and names juries (a mode, members and rules) in a
+repository or in the user folder. Then `acp-jury run <jury> --dir <folder>` runs it.
 
 ## Goals
 
@@ -18,7 +18,7 @@ repository or in the user folder. Then `acp-council run <council> --dir <folder>
   set of members.
 - Members that are agents, not chat completions, so they can open long Word files, spreadsheets and PDFs.
 - Two ways to combine members: blind votes, and a discussion after the blind votes.
-- Named, versioned council configurations, so a project runs the same council every time.
+- Named, versioned jury configurations, so a project runs the same jury every time.
 - Full records of every run, so a run can be audited, resumed and replayed.
 - A small core that follows the acpx architecture without depending on acpx: the runtime owns sessions, records
   and replay; the agents own the reasoning.
@@ -34,11 +34,11 @@ repository or in the user folder. Then `acp-council run <council> --dir <folder>
 
 | Term | Meaning |
 | --- | --- |
-| council | a named configuration: a mode, members and rules |
+| jury | a named configuration: a mode, members and rules |
 | member | one agent with one model, such as Claude Code with Claude Opus 5.5 |
-| agent profile | how acp-council starts a built-in agent: its pinned adapter, and how it runs clean and read-only |
-| question | the prompt that the council answers |
-| item | one thing that the council votes on; a question with no item list has one item, `answer` |
+| agent profile | how acp-jury starts a built-in agent: its pinned adapter, and how it runs clean and read-only |
+| question | the prompt that the jury answers |
+| item | one thing that the jury votes on; a question with no item list has one item, `answer` |
 | folder | the read-only material that the members read |
 | board | the list of every member message in a run |
 | message | one post on the board, with its sender, its text and its vote |
@@ -52,18 +52,18 @@ repository or in the user folder. Then `acp-council run <council> --dir <folder>
 ## Architecture
 
 ```text
-  acp-council run <council> --dir <folder>          (src/cli)
+     acp-jury run <jury> --dir <folder>             (src/cli)
                      |
-             config: user + repo levels             (src/config)   members.json, councils/<name>.json
+          config: user + repo levels                (src/config)   members.json, juries/<name>.json
                      |
-                 runCouncil                         (src/run)      run folder, seats, round loop, records
+                  runJury                           (src/run)      run folder, seats, round loop, records
             /        |          \
-   mode rules    council state   seats             (src/domain)   blind | discuss, counting, prompts, report
+   mode rules    jury state    seats                (src/domain)   blind | discuss, counting, prompts, report
                      |
               member sessions                       (src/acp)      process, ACP session, permissions, file reads
                      | ACP over stdio (JSON-RPC)
       +--------------+---------------+
- claude-agent-acp    codex-acp      pi-acp           (src/agents)   one profile per built-in agent
+ claude-agent-acp    codex-acp      pi-acp          (src/agents)   one profile per built-in agent
    (Claude Code)      (Codex)        (Pi)
 ```
 
@@ -71,11 +71,11 @@ The modules and what each one owns:
 
 | Module | Owns | Depends on |
 | --- | --- | --- |
-| `src/domain` | pure council logic: types, vote checks, counting, the round state machine, the mode rules, prompts and the report | nothing |
-| `src/config` | the two configuration levels, file schemas and council resolution | nothing |
+| `src/domain` | pure jury logic: types, vote checks, counting, the round state machine, the mode rules, prompts and the report | nothing |
+| `src/config` | the two configuration levels, file schemas and jury resolution | nothing |
 | `src/agents` | the agent registry: one `AgentProfile` per built-in agent, and the launch plan of a member | `config` |
 | `src/acp` | `AgentProcess` (the adapter process and its process group), `AcpSession` (initialize, session, options, prompt, cancel), the client handlers, the permission policy and reads inside the member's folder | `agents`, `util` |
-| `src/run` | `runCouncil`: the run folder (`RunStore`), the members' private copies (`Workspace`), seats (`Member`), the turn protocol (prompt, then one nudge), the `RoundLoop`, limits, resume and outputs | all of the above |
+| `src/run` | `runJury`: the run folder (`RunStore`), the members' private copies (`Workspace`), seats (`Member`), the turn protocol (prompt, then one nudge), the `RoundLoop`, limits, resume and outputs | all of the above |
 | `src/cli` | the command line | `config`, `run` |
 
 `slophammer.yml` enforces these boundaries.
@@ -100,7 +100,7 @@ Every adapter version bump needs a smoke test with the real agent.
 - `AgentProcess` starts the adapter in its own process group, so that stopping it also stops the agent it started.
 - `AcpSession` sends `initialize`, opens a session with `session/new` in the member's folder, and sets the model and
   other options with `session/set_config_option`. A model is given as its ID with the version, such as
-  `claude-opus-5-5`. acp-council sends the ID as is and lets the agent resolve it: the Claude adapter, for example,
+  `claude-opus-5-5`. acp-jury sends the ID as is and lets the agent resolve it: the Claude adapter, for example,
   lists Opus 5.5 under the value `opus` and maps `claude-opus-5-5` to it. `run.json` records the requested ID and
   the value and name that the agent reports. An ID that the agent refuses fails the start with the list of offered
   values. Turns use `session/prompt`; a turn past its time limit gets `session/cancel`, and an agent that does not
@@ -191,9 +191,9 @@ keeps each member's blind vote next to its final vote.
 - Every turn ends with one fenced JSON block that maps each open item to its vote. A vote on an item that is not
   open is ignored. A block that is missing, not JSON, or has a missing or invalid vote gets one nudge in the same
   session; if the answer is still invalid, the turn records `no_result`, and the member has no vote that round.
-- Counting is in code and compares `choice`. The rule is set per council: `unanimous` (the default) or
+- Counting is in code and compares `choice`. The rule is set per jury: `unanimous` (the default) or
   `majority` (more than half of all members). An item with a tie, a missing vote or votes that do not meet the rule
-  is a split. A split always goes to a person; the council never closes it by itself.
+  is a split. A split always goes to a person; the jury never closes it by itself.
 
 ## Limits
 
@@ -208,7 +208,7 @@ Each run has its own folder:
 
 ```text
 runs/<run id>/
-  run.json            question, resolved council, label map, member commands, clean flags, adapter versions, applied options, input hashes
+  run.json            question, resolved jury, label map, member commands, clean flags, adapter versions, applied options, input hashes
   board.jsonl         every member message
   members/<label>/
     events.ndjson     every ACP session/update and permission decision of the member
@@ -219,7 +219,7 @@ runs/<run id>/
 ```
 
 - A rerun with the same run ID skips turns that are already saved, so a stopped run resumes without paying again.
-  A run folder that holds a run with other inputs (question, items, council, members, schema or folder content)
+  A run folder that holds a run with other inputs (question, items, jury, members, schema or folder content)
   refuses to resume.
 - Backup is a hook that the caller gives. Before it runs, a scan for keys blocks it when the run folder holds one.
 
@@ -229,14 +229,14 @@ There are two levels, as in Claude Code, Codex and Pi. Each level holds a differ
 
 | Level | Folder | Holds | Why there |
 | --- | --- | --- | --- |
-| user | `~/.acp-council/`, or `ACP_COUNCIL_HOME`, or `--config-dir` | `members.json`: which agent, which model, options | members depend on the machine: installed CLIs, logins and provider keys |
-| repo | the nearest `.acp-council/` from the working folder upward | `councils/<name>.json`, with their vote schemas and default questions | a council is part of how a project works, and goes into git |
+| user | `~/.acp-jury/`, or `ACP_JURY_HOME`, or `--config-dir` | `members.json`: which agent, which model, options | members depend on the machine: installed CLIs, logins and provider keys |
+| repo | the nearest `.acp-jury/` from the working folder upward | `juries/<name>.json`, with their vote schemas and default questions | a jury is part of how a project works, and goes into git |
 
 - Both levels have the same layout, so either level can hold either file. When both levels have a file with the
   same name, the repo file wins. Files are never merged.
-- A council name has letters, digits, `_` and `-`, so files such as `review.schema.json` next to the councils are
-  not councils. A council can also be given as the path of a council file.
-- Runs go to `<level folder>/runs/<run id>`, next to the configuration that holds the council, unless `--out`
+- A jury name has letters, digits, `_` and `-`, so files such as `review.schema.json` next to the juries are
+  not juries. A jury can also be given as the path of a jury file.
+- Runs go to `<level folder>/runs/<run id>`, next to the configuration that holds the jury, unless `--out`
   says otherwise. The runs folder gets a `.gitignore` that ignores everything.
 
 `members.json`:
@@ -261,7 +261,7 @@ There are two levels, as in Claude Code, Codex and Pi. Each level holds a differ
 | `options` | other session config options of the agent, by ID, such as a reasoning effort |
 | `extensions` | Pi only: the extension files to load; every other extension stays off |
 
-`councils/<name>.json`:
+`juries/<name>.json`:
 
 ```json
 { "mode": "discuss", "members": ["claude-opus-5-5", "gpt-6-astra"], "rounds": 5, "rule": "unanimous", "schema": "review.schema.json", "question": "review.md" }
@@ -273,8 +273,8 @@ There are two levels, as in Claude Code, Codex and Pi. Each level holds a differ
 | `members` | required | member names from `members.json` |
 | `rounds` | 5 | the most discussion rounds after the blind round; at least 5 |
 | `rule` | `unanimous` | `unanimous` or `majority` |
-| `schema` | choice and reason | a JSON Schema file for one item's vote, relative to the council file |
-| `question` | none | a default question file, relative to the council file |
+| `schema` | choice and reason | a JSON Schema file for one item's vote, relative to the jury file |
+| `question` | none | a default question file, relative to the jury file |
 | `permissions` | `read` | `read`, or `exec` to also allow commands |
 | `turnTimeoutSec` | 1800 | the time limit of one turn |
 | `concurrency` | 3 | the most members that work at the same time |
@@ -283,15 +283,15 @@ There are two levels, as in Claude Code, Codex and Pi. Each level holds a differ
 ## Interface
 
 ```bash
-acp-council run review --dir ./folder --question question.md --items items.json
-acp-council run review --dir ./folder --mode blind --members claude-opus-5-5,gpt-6-astra --rounds 8 --run-id my-run
-acp-council show <run folder>
-acp-council councils
+acp-jury run review --dir ./folder --question question.md --items items.json
+acp-jury run review --dir ./folder --mode blind --members claude-opus-5-5,gpt-6-astra --rounds 8 --run-id my-run
+acp-jury show <run folder>
+acp-jury juries
 ```
 
-`run` flags change a council field for one run only, and the result is checked again, so `--rounds 3` fails.
-The same operations are exported as a TypeScript API (`resolveCouncil`, `runCouncil`, `listCouncils`), so that
-other tools call acp-council in code.
+`run` flags change a jury field for one run only, and the result is checked again, so `--rounds 3` fails.
+The same operations are exported as a TypeScript API (`resolveJury`, `runJury`, `listJuries`), so that
+other tools call acp-jury in code.
 
 ## Later
 

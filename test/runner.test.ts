@@ -1,20 +1,20 @@
 import { readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { ResolvedCouncil } from "../src/config/load.ts";
-import { councilFileSchema, type CouncilFile } from "../src/config/schema.ts";
+import type { ResolvedJury } from "../src/config/load.ts";
+import { juryFileSchema, type JuryFile } from "../src/config/schema.ts";
 import { boardFromRecords } from "../src/run/board.ts";
 import { RunError } from "../src/run/errors.ts";
 import { newRunId } from "../src/run/inputs.ts";
 import type { Progress } from "../src/run/rounds.ts";
-import { runCouncil, type RunOptions } from "../src/run/runner.ts";
+import { runJury, type RunOptions } from "../src/run/runner.ts";
 import { fakeMember, folderWith, prompts, reply, tempDir, type FakeScript } from "./helpers.ts";
 
-type Setup = { dir: string; folder: string; logs: string[]; council: ResolvedCouncil };
+type Setup = { dir: string; folder: string; logs: string[]; jury: ResolvedJury };
 
 async function setup(
   scripts: FakeScript[],
-  council: Partial<CouncilFile> = {},
+  jury: Partial<JuryFile> = {},
   schema?: Record<string, unknown>,
 ): Promise<Setup> {
   const dir = await tempDir();
@@ -25,11 +25,11 @@ async function setup(
     dir,
     folder,
     logs: members.map((member) => member.log),
-    council: {
+    jury: {
       name: "test",
       level: "file",
       path: join(dir, "test.json"),
-      council: councilFileSchema.parse({ members: names, ...council }),
+      settings: juryFileSchema.parse({ members: names, ...jury }),
       membersPath: join(dir, "members.json"),
       members: members.map((member, index) => ({ name: names[index] ?? "", config: member.config })),
       schema: schema === undefined ? null : { path: join(dir, "schema.json"), json: schema },
@@ -45,7 +45,7 @@ const items = [
 
 function options(s: Setup, extra: Partial<RunOptions> = {}): RunOptions {
   return {
-    council: s.council,
+    jury: s.jury,
     folder: s.folder,
     question: "Check the document.",
     items,
@@ -58,7 +58,7 @@ async function json(path: string): Promise<Record<string, unknown>> {
   return JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>;
 }
 
-describe("runCouncil", () => {
+describe("runJury", () => {
   it("runs a blind panel and writes the run folder", async () => {
     const s = await setup([
       { rounds: { "1": { reply: reply("A thinks.", { a: ["yes", "ra"], b: ["yes", "rb"] }) } } },
@@ -66,14 +66,14 @@ describe("runCouncil", () => {
       { rounds: { "1": { reply: reply("C thinks.", { a: ["yes", "ta"], b: ["no", "tb"] }) } } },
     ]);
     const progress: Progress[] = [];
-    const outcome = await runCouncil(options(s, { runId: "blind-1", onProgress: (p) => progress.push(p) }));
+    const outcome = await runJury(options(s, { runId: "blind-1", onProgress: (p) => progress.push(p) }));
     expect(outcome).toMatchObject({ runId: "blind-1", stop: "rounds_done" });
     expect(outcome.result).toMatchObject({ mode: "blind", rounds: 1, agreed: 1, split: 1 });
     expect(progress.filter((p) => p.type === "turn")).toHaveLength(3);
     const files = await readdir(outcome.runDir);
     expect(files.sort()).toEqual(["board.jsonl", "members", "report.md", "result.json", "run.json"]);
     const run = await json(join(outcome.runDir, "run.json"));
-    expect(run).toMatchObject({ runId: "blind-1", acpCouncilVersion: "0.1.0", question: "Check the document." });
+    expect(run).toMatchObject({ runId: "blind-1", acpJuryVersion: "0.1.0", question: "Check the document." });
     expect(run).toMatchObject({
       members: [
         { label: "member:A", name: "fake0", clean: null, session: { agentName: "fake-agent" } },
@@ -115,7 +115,7 @@ describe("runCouncil", () => {
       ],
       { mode: "discuss" },
     );
-    const outcome = await runCouncil(options(s));
+    const outcome = await runJury(options(s));
     expect(outcome.stop).toBe("all_agreed");
     expect(outcome.result).toMatchObject({ rounds: 2, agreed: 2, split: 0 });
     expect(outcome.result.items[1]?.members["member:B"]?.changes).toEqual([
@@ -141,7 +141,7 @@ describe("runCouncil", () => {
       ],
       { mode: "discuss", rounds: 5 },
     );
-    const outcome = await runCouncil(options(s));
+    const outcome = await runJury(options(s));
     expect(outcome.stop).toBe("rounds_done");
     expect(outcome.result).toMatchObject({ rounds: 6, agreed: 1, split: 1 });
     expect(await prompts(s.logs[0] ?? "")).toHaveLength(6);
@@ -157,7 +157,7 @@ describe("runCouncil", () => {
       {},
       { type: "object", properties: { choice: { enum: ["yes", "no"] }, reason: { type: "string" } } },
     );
-    const outcome = await runCouncil({ ...options(s), items: undefined });
+    const outcome = await runJury({ ...options(s), items: undefined });
     const answer = outcome.result.items[0];
     expect(answer?.id).toBe("answer");
     expect(answer?.members["member:A"]?.final).toEqual({ choice: "yes", reason: "r" });
@@ -185,13 +185,13 @@ describe("runCouncil", () => {
       },
     ];
     const s = await setup(scripts, { mode: "discuss" });
-    const first = await runCouncil(options(s, { runId: "resume" }));
+    const first = await runJury(options(s, { runId: "resume" }));
     expect(first.result.rounds).toBe(2);
     for (const label of ["A", "B"]) {
       await rm(join(first.runDir, "members", label, "turns", "2.json"));
     }
     await rm(s.logs[0] ?? "");
-    const second = await runCouncil(options(s, { runId: "resume" }));
+    const second = await runJury(options(s, { runId: "resume" }));
     expect(second.result).toEqual(first.result);
     const resumed = await prompts(s.logs[0] ?? "");
     expect(resumed).toHaveLength(1);
@@ -203,8 +203,8 @@ describe("runCouncil", () => {
 
   it("refuses to resume a run with other inputs", async () => {
     const s = await setup([{ rounds: { "*": { reply: reply("x", { a: ["y", "r"], b: ["y", "r"] }) } } }]);
-    await runCouncil(options(s, { runId: "same" }));
-    await expect(runCouncil(options(s, { runId: "same", question: "Another question." }))).rejects.toThrow(RunError);
+    await runJury(options(s, { runId: "same" }));
+    await expect(runJury(options(s, { runId: "same", question: "Another question." }))).rejects.toThrow(RunError);
   });
 
   it("stops at the time limit and the token limit", async () => {
@@ -215,7 +215,7 @@ describe("runCouncil", () => {
       ],
       { mode: "discuss", limits: { maxRunSec: 1 } },
     );
-    expect((await runCouncil(options(slow))).stop).toBe("time_limit");
+    expect((await runJury(options(slow))).stop).toBe("time_limit");
     const costly = await setup(
       [
         { rounds: { "*": { reply: reply("x", { a: ["y", "r"], b: ["y", "r"] }), totalTokens: 100 } } },
@@ -223,7 +223,7 @@ describe("runCouncil", () => {
       ],
       { mode: "discuss", limits: { maxTokens: 50 } },
     );
-    const outcome = await runCouncil(options(costly));
+    const outcome = await runJury(options(costly));
     expect(outcome).toMatchObject({ stop: "token_limit", result: { rounds: 1, split: 1 } });
   });
 
@@ -232,7 +232,7 @@ describe("runCouncil", () => {
       [{ failSessionNew: true }, { rounds: { "*": { reply: reply("x", { a: ["y", "r"], b: ["y", "r"] }) } } }],
       { concurrency: 1 },
     );
-    const outcome = await runCouncil(options(s));
+    const outcome = await runJury(options(s));
     expect(outcome.result.split).toBe(2);
     const record = await json(join(outcome.runDir, "members", "A", "turns", "1.json"));
     expect(record).toMatchObject({ status: "no_result" });
@@ -242,9 +242,9 @@ describe("runCouncil", () => {
   it("backs up only a run folder with no key in it", async () => {
     const s = await setup([{ rounds: { "*": { reply: reply("x", { a: ["y", "r"], b: ["y", "r"] }) } } }]);
     const backedUp: string[] = [];
-    const outcome = await runCouncil(options(s, { backup: (dir) => Promise.resolve(void backedUp.push(dir)) }));
+    const outcome = await runJury(options(s, { backup: (dir) => Promise.resolve(void backedUp.push(dir)) }));
     expect(backedUp).toEqual([outcome.runDir]);
-    const leaky = runCouncil(
+    const leaky = runJury(
       options(s, {
         question: `Use ${"hf_" + "b".repeat(34)}`,
         backup: () => Promise.reject(new Error("must not run")),

@@ -1,6 +1,6 @@
 import { planLaunch } from "../agents/registry.ts";
 import type { LaunchPlan } from "../agents/profile.ts";
-import type { ResolvedCouncil } from "../config/load.ts";
+import type { ResolvedJury } from "../config/load.ts";
 import type { Item } from "../domain/types.ts";
 import type { VoteSchema } from "../domain/vote.ts";
 import { Member } from "./member.ts";
@@ -11,7 +11,7 @@ import type { Workspace } from "./workspace.ts";
 export type SeatedMember = Seat & { plan: LaunchPlan };
 
 export type SeatingOptions = {
-  council: ResolvedCouncil;
+  jury: ResolvedJury;
   labels: string[];
   folder: string;
   question: string;
@@ -27,10 +27,10 @@ export async function seatMembers(
   workspace: Workspace,
   store: RunStore,
 ): Promise<SeatedMember[]> {
-  const { council } = options;
-  const permissions = council.council.permissions;
+  const { jury } = options;
+  const permissions = jury.settings.permissions;
   const seats: SeatedMember[] = [];
-  for (const [index, { name, config }] of council.members.entries()) {
+  for (const [index, { name, config }] of jury.members.entries()) {
     const label = options.labels[index] ?? "";
     const { scratchDir, workDir } = await workspace.seat(label, options.folder);
     const plan = await planLaunch(config, permissions, scratchDir);
@@ -45,7 +45,7 @@ export async function seatMembers(
     };
     const intro = {
       label,
-      memberCount: council.members.length,
+      memberCount: jury.members.length,
       question: options.question,
       items: options.items,
       schema: options.schema,

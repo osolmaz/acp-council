@@ -1,8 +1,8 @@
 import { countRound } from "./count.ts";
 import { MODES } from "./modes.ts";
-import type { CouncilResult, Item, ItemResult, ItemVote, MemberItemRecord, Mode, Rule, Vote } from "./types.ts";
+import type { JuryResult, Item, ItemResult, ItemVote, MemberItemRecord, Mode, Rule, Vote } from "./types.ts";
 
-export type CouncilSpec = {
+export type JurySpec = {
   mode: Mode;
   rule: Rule;
   /** The most discussion rounds after the blind round. Not used in `blind` mode. */
@@ -14,8 +14,8 @@ export type CouncilSpec = {
 type CastVote = { round: number; vote: ItemVote };
 
 /** The state of the rounds: which items are open, and every valid vote of every member. */
-export type CouncilState = {
-  spec: CouncilSpec;
+export type JuryState = {
+  spec: JurySpec;
   /** The last round that ended; 0 before the blind round. */
   round: number;
   open: string[];
@@ -25,7 +25,7 @@ export type CouncilState = {
 
 export type NextRound = { round: number; openItems: string[] };
 
-export function startCouncil(spec: CouncilSpec): CouncilState {
+export function startJury(spec: JurySpec): JuryState {
   return {
     spec,
     round: 0,
@@ -35,14 +35,14 @@ export function startCouncil(spec: CouncilSpec): CouncilState {
   };
 }
 
-export function nextRound(state: CouncilState): NextRound | null {
+export function nextRound(state: JuryState): NextRound | null {
   if (state.open.length === 0 || state.round >= MODES[state.spec.mode].lastRound(state.spec.rounds)) {
     return null;
   }
   return { round: state.round + 1, openItems: [...state.open] };
 }
 
-function record(state: CouncilState, label: string, round: number, vote: Vote | undefined): void {
+function record(state: JuryState, label: string, round: number, vote: Vote | undefined): void {
   const memberHistory = state.history.get(label);
   if (memberHistory === undefined || vote === undefined) {
     return;
@@ -56,7 +56,7 @@ function record(state: CouncilState, label: string, round: number, vote: Vote | 
 }
 
 /** Records one round's votes and closes the items whose votes meet the rule. `votes` maps a label to its vote, or to nothing. */
-export function applyRound(state: CouncilState, round: number, votes: Map<string, Vote | undefined>): void {
+export function applyRound(state: JuryState, round: number, votes: Map<string, Vote | undefined>): void {
   for (const label of state.spec.labels) {
     record(state, label, round, votes.get(label));
   }
@@ -85,7 +85,7 @@ function memberRecord(cast: CastVote[]): MemberItemRecord {
   return { blind: blind?.vote ?? null, final: cast.at(-1)?.vote ?? null, changes };
 }
 
-function itemResult(state: CouncilState, id: string): ItemResult {
+function itemResult(state: JuryState, id: string): ItemResult {
   const closed = state.closed.get(id);
   const members = Object.fromEntries(
     state.spec.labels.map((label) => [label, memberRecord(state.history.get(label)?.get(id) ?? [])]),
@@ -95,7 +95,7 @@ function itemResult(state: CouncilState, id: string): ItemResult {
     : { id, status: "agreed", choice: closed.choice, closedInRound: closed.round, members };
 }
 
-export function councilResult(state: CouncilState): CouncilResult {
+export function juryResult(state: JuryState): JuryResult {
   const items = state.spec.items.map((item) => itemResult(state, item.id));
   return {
     mode: state.spec.mode,

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { ResolvedCouncil } from "../config/load.ts";
+import type { ResolvedJury } from "../config/load.ts";
 import type { Item } from "../domain/types.ts";
 import { DEFAULT_VOTE_SCHEMA } from "../domain/vote.ts";
 import { RunError } from "./errors.ts";
@@ -19,7 +19,7 @@ export function newRunId(now = new Date()): string {
 
 /** Hashes of everything that decides a run's answers. A run resumes only when they are the same. */
 export async function hashInputs(
-  council: ResolvedCouncil,
+  jury: ResolvedJury,
   question: string,
   items: Item[],
   folder: string,
@@ -27,9 +27,9 @@ export async function hashInputs(
   return {
     question: sha256(question),
     items: sha256(JSON.stringify(items)),
-    council: sha256(JSON.stringify(council.council)),
-    members: sha256(JSON.stringify(council.members)),
-    schema: sha256(JSON.stringify(council.schema?.json ?? DEFAULT_VOTE_SCHEMA)),
+    jury: sha256(JSON.stringify(jury.settings)),
+    members: sha256(JSON.stringify(jury.members)),
+    schema: sha256(JSON.stringify(jury.schema?.json ?? DEFAULT_VOTE_SCHEMA)),
     folder: await hashFolder(folder),
   };
 }

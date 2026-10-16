@@ -1,4 +1,4 @@
-import { applyRound, nextRound, type CouncilState } from "../domain/council.ts";
+import { applyRound, nextRound, type JuryState } from "../domain/jury.ts";
 import type { ModeRules } from "../domain/modes.ts";
 import type { Vote } from "../domain/types.ts";
 import { pool } from "../util/async.ts";
@@ -6,7 +6,7 @@ import { boardFromRecords } from "./board.ts";
 import { limitReached, type LimitReason } from "./limits.ts";
 import type { Member } from "./member.ts";
 import type { RoundRecord, RunStore } from "./store.ts";
-import type { CouncilFile } from "../config/schema.ts";
+import type { JuryFile } from "../config/schema.ts";
 
 export type StopReason = "all_agreed" | "rounds_done" | LimitReason;
 
@@ -19,9 +19,9 @@ export type Seat = { member: Member; name: string };
 export type RoundLoopOptions = {
   seats: Seat[];
   mode: ModeRules;
-  state: CouncilState;
+  state: JuryState;
   store: RunStore;
-  council: CouncilFile;
+  settings: JuryFile;
   /** Rounds saved by an earlier run with the same ID. They are reused, not played again. */
   saved: RoundRecord[];
   onProgress?: ((progress: Progress) => void) | undefined;
@@ -44,9 +44,9 @@ export class RoundLoop {
   }
 
   async run(): Promise<StopReason> {
-    const { state, council } = this.options;
+    const { state, settings } = this.options;
     for (let next = nextRound(state); next !== null; next = nextRound(state)) {
-      const limit = limitReached(council.limits, this.startedAt, this.records);
+      const limit = limitReached(settings.limits, this.startedAt, this.records);
       if (limit !== null) {
         return limit;
       }
@@ -56,13 +56,13 @@ export class RoundLoop {
   }
 
   private async play(round: number, openItems: string[]): Promise<void> {
-    const { seats, store, council, onProgress } = this.options;
+    const { seats, store, settings, onProgress } = this.options;
     onProgress?.({ type: "round", round, openItems });
     const board = boardFromRecords(this.records, round - 1);
     const tasks = seats.map(
-      (seat) => () => this.turn(seat, { round, openItems, board, timeoutMs: council.turnTimeoutSec * 1000 }),
+      (seat) => () => this.turn(seat, { round, openItems, board, timeoutMs: settings.turnTimeoutSec * 1000 }),
     );
-    const records = await pool(tasks, council.concurrency);
+    const records = await pool(tasks, settings.concurrency);
     this.records.push(...records);
     const votes = new Map<string, Vote | undefined>(records.map((record) => [record.label, record.vote ?? undefined]));
     applyRound(this.options.state, round, votes);
