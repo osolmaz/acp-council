@@ -7,7 +7,7 @@
     "configFile": "vitest.stryker.config.ts"
   },
   "coverageAnalysis": "perTest",
-  "mutate": ["src/domain/count.ts", "src/domain/vote.ts", "src/domain/council.ts"],
+  "mutate": ["src/domain/count.ts", "src/domain/vote.ts", "src/domain/jury.ts"],
   "thresholds": {
     "high": 80,
     "low": 75,

@@ -1,12 +1,12 @@
 {
-  "name": "acp-council",
+  "name": "acp-jury",
   "version": "0.1.0",
   "private": true,
-  "description": "Ask a council of coding agents one question about a folder, over the Agent Client Protocol",
+  "description": "A command-line tool that has coding agents vote on questions about a folder, over the Agent Client Protocol",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "acp-council": "dist/cli/main.js"
+    "acp-jury": "dist/cli/main.js"
   },
   "exports": {
     ".": {

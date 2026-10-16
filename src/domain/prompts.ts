@@ -32,7 +32,7 @@ function formatChoices(schema: VoteSchema): string {
 
 export function formatIntro(intro: Intro): string {
   return [
-    `You are ${intro.label}, one of ${intro.memberCount} members of a council. Each member is an AI agent that answers the same question on its own. The other members see you only by your label.`,
+    `You are ${intro.label}, one of ${intro.memberCount} members of a jury. Each member is an AI agent that answers the same question on its own. The other members see you only by your label.`,
     "Your working folder holds the material for the question. Read it with your tools. Do not change any file.",
     `## Question\n\n${intro.question.trim()}`,
     `## Items\n\nVote on each of these items:\n\n${formatItems(intro.items)}`,

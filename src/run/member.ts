@@ -14,7 +14,7 @@ export type RoundContext = {
 };
 
 /**
- * A seat on the council. It owns the member's ACP session, opens a new one when the adapter has stopped, and tracks
+ * A seat on the jury. It owns the member's ACP session, opens a new one when the adapter has stopped, and tracks
  * which board messages the current session has seen, so that each turn sends only what is new.
  */
 export class Member {

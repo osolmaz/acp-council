@@ -1,4 +1,4 @@
-import type { CouncilFile } from "../config/schema.ts";
+import type { JuryFile } from "../config/schema.ts";
 import type { RoundRecord } from "./store.ts";
 
 export type LimitReason = "time_limit" | "token_limit";
@@ -9,7 +9,7 @@ export function totalTokens(records: RoundRecord[]): number {
 
 /** The run's limits are checked between rounds, so a round that has started always ends. */
 export function limitReached(
-  limits: CouncilFile["limits"],
+  limits: JuryFile["limits"],
   startedAt: number,
   records: RoundRecord[],
 ): LimitReason | null {

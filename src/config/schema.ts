@@ -30,14 +30,14 @@ export const membersFileSchema = z.record(z.string().min(1), memberSchema);
 
 export const MIN_ROUNDS = 5;
 
-export const councilFileSchema = z.strictObject({
+export const juryFileSchema = z.strictObject({
   mode: z.enum(["blind", "discuss"]).default("blind"),
   members: z.array(z.string().min(1)).min(1),
   rounds: z.number().int().min(MIN_ROUNDS).default(MIN_ROUNDS),
   rule: z.enum(["unanimous", "majority"]).default("unanimous"),
-  /** A JSON Schema file for one item's vote, relative to the council file. */
+  /** A JSON Schema file for one item's vote, relative to the jury file. */
   schema: z.string().min(1).optional(),
-  /** A default question file, relative to the council file. */
+  /** A default question file, relative to the jury file. */
   question: z.string().min(1).optional(),
   permissions: z.enum(["read", "exec"]).default("read"),
   turnTimeoutSec: z.number().int().positive().default(1800),
@@ -50,7 +50,7 @@ export const councilFileSchema = z.strictObject({
     .default({}),
 });
 
-export type CouncilFile = z.infer<typeof councilFileSchema>;
+export type JuryFile = z.infer<typeof juryFileSchema>;
 
 export const itemsFileSchema = z
   .array(z.strictObject({ id: z.string().regex(/^[A-Za-z0-9_.-]+$/), text: z.string() }))

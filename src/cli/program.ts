@@ -1,22 +1,22 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { Command, CommanderError, InvalidArgumentError } from "commander";
 import {
   ConfigError,
   configDirs,
-  isCouncilPath,
-  listCouncils,
+  isJuryPath,
+  listJuries,
   readJsonFile,
   readText,
-  resolveCouncil,
+  resolveJury,
   type ConfigDirs,
-  type CouncilOverrides,
-  type ResolvedCouncil,
+  type JuryOverrides,
+  type ResolvedJury,
 } from "../config/load.ts";
 import { itemsFileSchema } from "../config/schema.ts";
 import { RunError } from "../run/errors.ts";
 import type { Progress } from "../run/rounds.ts";
-import { runCouncil } from "../run/runner.ts";
+import { runJury } from "../run/runner.ts";
 import { VERSION } from "../meta/version.ts";
 
 export type Io = {
@@ -57,7 +57,7 @@ function oneOf<T extends string>(values: readonly T[]): (value: string) => T {
   };
 }
 
-function overridesFrom(flags: RunFlags): CouncilOverrides {
+function overridesFrom(flags: RunFlags): JuryOverrides {
   return {
     ...(flags.mode === undefined ? {} : { mode: flags.mode }),
     ...(flags.members === undefined ? {} : { members: flags.members }),
@@ -66,24 +66,30 @@ function overridesFrom(flags: RunFlags): CouncilOverrides {
   };
 }
 
-/** Runs go next to the configuration that holds the council: `<config folder>/runs/<run id>`. */
-export function defaultOutDir(council: ResolvedCouncil, dirs: ConfigDirs): string {
-  const folders: Record<ResolvedCouncil["level"], string> = {
+/** Runs go next to the configuration that holds the jury: `<config folder>/runs/<run id>`. */
+export function defaultOutDir(jury: ResolvedJury, dirs: ConfigDirs): string {
+  const folders: Record<ResolvedJury["level"], string> = {
     repo: dirs.repo ?? dirs.user,
     user: dirs.user,
-    file: dirname(council.path),
+    file: dirname(jury.path),
   };
-  return join(folders[council.level], "runs");
+  return join(folders[jury.level], "runs");
 }
 
-async function questionText(flags: RunFlags, council: ResolvedCouncil, io: Io): Promise<string> {
+/** A path relative to the working folder when it is inside it, so that output stays short. */
+export function shortPath(path: string, cwd: string): string {
+  const rel = relative(cwd, path);
+  return rel === "" || rel.startsWith("..") || isAbsolute(rel) ? path : rel;
+}
+
+async function questionText(flags: RunFlags, jury: ResolvedJury, io: Io): Promise<string> {
   if (flags.question !== undefined) {
     return readText(resolve(io.cwd, flags.question));
   }
-  if (council.question !== null) {
-    return council.question.text;
+  if (jury.question !== null) {
+    return jury.question.text;
   }
-  throw new ConfigError(`council ${council.name} has no default question; give one with --question`);
+  throw new ConfigError(`jury ${jury.name} has no default question; give one with --question`);
 }
 
 function describeProgress(progress: Progress): string {
@@ -100,15 +106,15 @@ async function runCommand(name: string, flags: RunFlags, io: Io): Promise<void> 
     env: io.env,
     ...(flags.configDir === undefined ? {} : { configDir: flags.configDir }),
   });
-  const target = isCouncilPath(name) ? resolve(io.cwd, name) : name;
-  const council = await resolveCouncil(target, dirs, overridesFrom(flags));
-  const outDir = flags.out === undefined ? defaultOutDir(council, dirs) : resolve(io.cwd, flags.out);
+  const target = isJuryPath(name) ? resolve(io.cwd, name) : name;
+  const jury = await resolveJury(target, dirs, overridesFrom(flags));
+  const outDir = flags.out === undefined ? defaultOutDir(jury, dirs) : resolve(io.cwd, flags.out);
   await mkdir(outDir, { recursive: true });
   await writeFile(join(outDir, ".gitignore"), "*\n");
-  const outcome = await runCouncil({
-    council,
+  const outcome = await runJury({
+    jury,
     folder: resolve(io.cwd, flags.dir),
-    question: await questionText(flags, council, io),
+    question: await questionText(flags, jury, io),
     ...(flags.items === undefined ? {} : { items: await readJsonFile(resolve(io.cwd, flags.items), itemsFileSchema) }),
     outDir,
     ...(flags.runId === undefined ? {} : { runId: flags.runId }),
@@ -118,7 +124,7 @@ async function runCommand(name: string, flags: RunFlags, io: Io): Promise<void> 
   });
   const { result } = outcome;
   io.stdout(
-    `run ${outcome.runId}: ${result.agreed} agreed, ${result.split} split after ${result.rounds} round(s) (${outcome.stop})\nreport: ${join(outcome.runDir, "report.md")}\n`,
+    `run ${outcome.runId}: ${result.agreed} agreed, ${result.split} split after ${result.rounds} round(s) (${outcome.stop})\nreport: ${shortPath(join(outcome.runDir, "report.md"), io.cwd)}\n`,
   );
 }
 
@@ -126,15 +132,15 @@ async function showCommand(runDir: string, io: Io): Promise<void> {
   io.stdout(await readText(join(resolve(io.cwd, runDir), "report.md")));
 }
 
-async function councilsCommand(flags: { configDir?: string }, io: Io): Promise<void> {
+async function juriesCommand(flags: { configDir?: string }, io: Io): Promise<void> {
   const dirs = await configDirs({
     cwd: io.cwd,
     env: io.env,
     ...(flags.configDir === undefined ? {} : { configDir: flags.configDir }),
   });
-  const listings = await listCouncils(dirs);
+  const listings = await listJuries(dirs);
   if (listings.length === 0) {
-    io.stdout(`no councils in ${[dirs.repo, dirs.user].filter((dir) => dir !== null).join(" or ")}\n`);
+    io.stdout(`no juries in ${[dirs.repo, dirs.user].filter((dir) => dir !== null).join(" or ")}\n`);
     return;
   }
   for (const listing of listings) {
@@ -143,17 +149,17 @@ async function councilsCommand(flags: { configDir?: string }, io: Io): Promise<v
 }
 
 function program(io: Io): Command {
-  const root = new Command("acp-council")
-    .description("Ask a council of coding agents one question about a folder.")
+  const root = new Command("acp-jury")
+    .description("Ask a jury of coding agents one question about a folder.")
     .version(VERSION)
     .exitOverride()
     .configureOutput({ writeOut: io.stdout, writeErr: io.stderr });
   root
     .command("run")
-    .description("run a council on a folder")
-    .argument("<council>", "a council name, or the path of a council file")
+    .description("run a jury on a folder")
+    .argument("<jury>", "a jury name, or the path of a jury file")
     .requiredOption("--dir <folder>", "the read-only folder that the members read")
-    .option("--question <file>", "the question file; the default is the council's question")
+    .option("--question <file>", "the question file; the default is the jury's question")
     .option("--items <file>", "a JSON list of {id, text} items to vote on")
     .option("--mode <mode>", "blind or discuss", oneOf(["blind", "discuss"] as const))
     .option("--members <names>", "comma-separated member names", (value) => value.split(","))
@@ -169,10 +175,10 @@ function program(io: Io): Command {
     .argument("<run folder>")
     .action((runDir: string) => showCommand(runDir, io));
   root
-    .command("councils")
-    .description("list the councils and the file each one comes from")
+    .command("juries")
+    .description("list the juries and the file each one comes from")
     .option("--config-dir <dir>", "the user configuration folder")
-    .action((flags: { configDir?: string }) => councilsCommand(flags, io));
+    .action((flags: { configDir?: string }) => juriesCommand(flags, io));
   return root;
 }
 
@@ -186,7 +192,7 @@ export async function main(argv: string[], io: Io): Promise<number> {
       return error.exitCode;
     }
     if (error instanceof ConfigError || error instanceof RunError) {
-      io.stderr(`acp-council: ${error.message}\n`);
+      io.stderr(`acp-jury: ${error.message}\n`);
       return 1;
     }
     throw error;
