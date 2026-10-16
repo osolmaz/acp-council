@@ -38,7 +38,7 @@ LABEL = "#6E6A62"
 BAR = "#EBE7DE"
 
 NAME = "acp-jury"
-TAGLINE = ["A command-line tool that has coding", "agents vote on questions about a folder."]
+TAGLINE = ["An LLM jury made of coding agents.", "They vote alone, then discuss the splits."]
 
 # The real session: `acp-jury run` in a small project, with its real output (stderr, then stdout).
 PROMPT = "$ "

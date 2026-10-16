@@ -1,10 +1,10 @@
-<p align="center"><img src="assets/cover.svg" alt="acp-jury: A command-line tool that has coding agents vote on questions about a folder." width="100%"></p>
+<p align="center"><img src="assets/cover.svg" alt="acp-jury: An LLM jury made of coding agents. They vote alone, then discuss the splits." width="100%"></p>
 
 # acp-jury
 
-acp-jury is a command-line tool that has coding agents vote on questions about a folder. Claude Code, Codex or Pi
-each read the folder with their own tools and vote on each item you list, and you get a report of where they agree
-and where they split. It also works as a TypeScript library.
+acp-jury is an LLM jury made of coding agents. Claude Code, Codex and Pi each answer your question with their own
+tools and vote on every item you list, and you get a report of where they agree and where they split. It runs from
+the command line or as a TypeScript library.
 
 In `blind` mode, each agent votes alone. In `discuss` mode, the agents vote alone first, then read each other's
 arguments and vote again on the items they disagree on, for 5 rounds or as many as you set. Items that stay split

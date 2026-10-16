@@ -2,7 +2,7 @@
   "name": "acp-jury",
   "version": "0.1.0",
   "private": true,
-  "description": "A command-line tool that has coding agents vote on questions about a folder, over the Agent Client Protocol",
+  "description": "An LLM jury made of coding agents: they vote alone, then discuss the splits",
   "license": "MIT",
   "type": "module",
   "bin": {

@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-acp-jury asks a jury of coding agents one question about a folder and records how they answer. Each member
+acp-jury is an LLM jury made of coding agents: it asks them one question and records how they vote. Each member
 is a real agent (Claude Code, Codex, Pi) that reads the folder with its own tools. acp-jury talks to them over
 the Agent Client Protocol (ACP). The members never talk to each other directly: every message goes through one
 board, and the runtime decides who sees what and when. There are two modes. In `blind`, each member votes alone.
