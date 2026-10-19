@@ -128,3 +128,31 @@ const { result } = await runJury({ jury, folder: "./folder", question: "Is it co
 ## License
 
 [MIT](LICENSE)
+
+### Bound a member session
+
+Set `sessionLimits` in the jury file to limit each member across rounds, adapter restarts, and run resumes:
+
+```json
+{
+  "sessionLimits": {
+    "workSec": 300,
+    "submissionSec": 150,
+    "finalSec": 150,
+    "maxTokens": 500000,
+    "maxOutputTokens": 40000
+  }
+}
+```
+
+The clock starts before adapter startup. Reminders interrupt the current turn and continue the same session at
+half time and, when applicable, with five, two, and one minute left. After investigation, the member gets two
+submission periods. An early submission does not gain unused investigation time. The client refuses its own
+file reads and permission requests during submission; adapters must also obey the submission-only prompt for
+tools they execute without client permission.
+
+The run keeps partial text and records `no_result` when there is no valid vote. It does not invent missing votes.
+The member's `budget.json` preserves the deadline and reported token usage. Changing limits when resuming is an
+error. Token stops use usage reported by the adapter after a turn; they cannot prevent an in-flight token overrun.
+Missing usage is marked unknown. Turn records retain input, output, cache-read, and cache-write counts when the
+adapter supplies them. These counts are not a dollar billing cap.

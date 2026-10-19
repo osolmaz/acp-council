@@ -41,6 +41,15 @@ export const juryFileSchema = z.strictObject({
   question: z.string().min(1).optional(),
   permissions: z.enum(["read", "exec"]).default("read"),
   turnTimeoutSec: z.number().int().positive().default(1800),
+  sessionLimits: z
+    .strictObject({
+      workSec: z.number().positive(),
+      submissionSec: z.number().positive(),
+      finalSec: z.number().positive(),
+      maxTokens: z.number().int().positive(),
+      maxOutputTokens: z.number().int().positive(),
+    })
+    .optional(),
   concurrency: z.number().int().positive().default(3),
   limits: z
     .strictObject({

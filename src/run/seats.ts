@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { planLaunch } from "../agents/registry.ts";
 import type { LaunchPlan } from "../agents/profile.ts";
 import type { ResolvedJury } from "../config/load.ts";
@@ -42,6 +43,9 @@ export async function seatMembers(
       workDir,
       permissions,
       startTimeoutMs: START_TIMEOUT_MS,
+      ...(jury.settings.sessionLimits
+        ? { budget: { path: join(store.memberDir(label), "budget.json"), limits: jury.settings.sessionLimits } }
+        : {}),
     };
     const intro = {
       label,

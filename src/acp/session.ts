@@ -1,3 +1,4 @@
+import { Budget, type SessionBudget } from "./budget.ts";
 import * as acp from "@agentclientprotocol/sdk";
 import type { LaunchPlan, Permissions } from "../agents/profile.ts";
 import { VERSION } from "../meta/version.ts";
@@ -14,6 +15,7 @@ export type SessionSpec = {
   workDir: string;
   permissions: Permissions;
   startTimeoutMs: number;
+  budget?: { path: string; limits: SessionBudget };
 };
 
 export type SessionInfo = {
@@ -49,35 +51,52 @@ export class AcpSession {
   private readonly sessionId: string;
   private readonly transcript: Transcript;
   readonly info: SessionInfo;
+  readonly budget: Budget | undefined;
+  private previousUsage = { tokens: 0, output: 0 };
 
   private constructor(
     process: AgentProcess,
     connection: acp.ClientConnection,
     started: { sessionId: string; info: SessionInfo },
     transcript: Transcript,
+    budget?: Budget,
   ) {
     this.process = process;
     this.connection = connection;
     this.sessionId = started.sessionId;
     this.info = started.info;
+    this.budget = budget;
     this.transcript = transcript;
   }
 
   /** Starts the adapter, initializes the protocol, opens a session in the member's folder and sets its options. */
   static async open(spec: SessionSpec, hooks: SessionHooks): Promise<AcpSession> {
+    const budget = spec.budget ? new Budget(spec.budget.path, spec.budget.limits) : undefined;
+    if (budgetUnavailable(budget)) throw new Error("member budget exhausted before startup");
     const process = AgentProcess.start(spec.plan.command, {
       cwd: spec.workDir,
       env: spec.plan.env,
       onStderr: hooks.onStderr,
     });
     const transcript = new Transcript();
-    const policy = { workDir: spec.workDir, permissions: spec.permissions, allowKinds: spec.plan.allowKinds };
+    const policy = {
+      workDir: spec.workDir,
+      permissions: spec.permissions,
+      allowKinds: spec.plan.allowKinds,
+      canInvestigate: () => budget === undefined || budget.phase() === "work",
+    };
     const connection = clientApp(policy, hooks, transcript).connect(process.stream());
     void process.exited.then((description) => {
       connection.close(new Error(description));
     });
     try {
-      return new AcpSession(process, connection, await startSession(connection, spec), transcript);
+      return new AcpSession(
+        process,
+        connection,
+        await within(startSession(connection, spec), boundedTimeout(budget, spec.startTimeoutMs), "member startup"),
+        transcript,
+        budget,
+      );
     } catch (error) {
       connection.close();
       process.kill();
@@ -92,6 +111,16 @@ export class AcpSession {
   /** Sends one prompt and waits for the turn to end. A turn past its time limit is cancelled. */
   async prompt(text: string, timeoutMs: number): Promise<TurnOutcome> {
     const started = Date.now();
+    if (budgetUnavailable(this.budget))
+      return {
+        status: "timeout",
+        text: "",
+        stopReason: null,
+        usage: null,
+        error: "member budget exhausted",
+        durationMs: 0,
+      };
+    timeoutMs = boundedTimeout(this.budget, timeoutMs);
     this.transcript.reset();
     const request = this.connection.agent.request(acp.methods.agent.session.prompt, {
       sessionId: this.sessionId,
@@ -101,20 +130,39 @@ export class AcpSession {
     const base = { text: this.transcript.text(), durationMs: Date.now() - started };
     if (result.kind === "value") {
       const { stopReason, usage } = result.value;
+      this.recordUsage(usage);
       return { ...base, status: "done", stopReason, usage: usage ?? null, error: null };
     }
+    this.budget?.unknownUsage();
     if (result.kind === "error") {
       const exit = await settle(this.process.exited, CRASH_GRACE_MS);
       const error = exit.kind === "value" ? exit.value : errorMessage(result.error);
       return { ...base, status: "error", stopReason: null, usage: null, error };
     }
     await this.cancel(request);
+    this.budget?.unknownUsage();
     return {
       ...base,
+      text: this.transcript.text(),
       status: "timeout",
       stopReason: null,
       usage: null,
       error: `the turn took longer than ${timeoutMs} ms`,
+    };
+  }
+
+  private recordUsage(usage: acp.Usage | null | undefined): void {
+    if (!usage) {
+      this.budget?.unknownUsage();
+      return;
+    }
+    this.budget?.addUsage(
+      Math.max(0, usage.totalTokens - this.previousUsage.tokens),
+      Math.max(0, usage.outputTokens - this.previousUsage.output),
+    );
+    this.previousUsage = {
+      tokens: Math.max(this.previousUsage.tokens, usage.totalTokens),
+      output: Math.max(this.previousUsage.output, usage.outputTokens),
     };
   }
 
@@ -206,4 +254,12 @@ function refusal(error: unknown, request: OptionRequest, offered: acp.SessionCon
   const values = option === undefined ? "" : describeValues(option);
   const list = values === "" ? "" : `; it offers: ${values}`;
   return new Error(`the agent refused ${request.requested} for ${request.configId} (${errorMessage(error)})${list}`);
+}
+
+function budgetUnavailable(budget: Budget | undefined): boolean {
+  return budget !== undefined && (budget.phase() === "stopped" || budget.exhausted());
+}
+
+function boundedTimeout(budget: Budget | undefined, timeout: number): number {
+  return budget === undefined ? timeout : Math.min(timeout, budget.remaining(budget.phase()));
 }
