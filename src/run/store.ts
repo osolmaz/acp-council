@@ -18,6 +18,17 @@ const attemptSchema = z.object({
   status: z.enum(["done", "timeout", "error"]),
   stopReason: z.string().nullable(),
   totalTokens: z.number().nullable(),
+  usage: z
+    .object({
+      totalTokens: z.number(),
+      inputTokens: z.number(),
+      outputTokens: z.number(),
+      cachedReadTokens: z.number().nullish(),
+      cachedWriteTokens: z.number().nullish(),
+      thoughtTokens: z.number().nullish(),
+    })
+    .nullable()
+    .optional(),
   error: z.string().nullable(),
   voteErrors: z.array(z.string()),
   durationMs: z.number(),

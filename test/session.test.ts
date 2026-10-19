@@ -2,13 +2,21 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { planLaunch } from "../src/agents/registry.ts";
+import { compileVoteSchema } from "../src/domain/vote.ts";
+import { castVote } from "../src/run/turn.ts";
+import type { SessionBudget } from "../src/acp/budget.ts";
 import { AcpSession, type SessionSpec } from "../src/acp/session.ts";
 import type { MemberConfig } from "../src/config/schema.ts";
 import { fakeMember, folderWith, readLog, tempDir, type FakeScript } from "./helpers.ts";
 
 type Opened = { member: AcpSession; log: string; events: Record<string, unknown>[]; stderr: string[] };
 
-async function open(script: FakeScript, extra: Partial<MemberConfig> = {}, model?: string): Promise<Opened> {
+async function open(
+  script: FakeScript,
+  extra: Partial<MemberConfig> = {},
+  model?: string,
+  limits?: SessionBudget,
+): Promise<Opened> {
   const dir = await tempDir();
   const workDir = await folderWith(dir, { "a.txt": "alpha" });
   await writeFile(join(dir, "outside.txt"), "secret");
@@ -23,6 +31,7 @@ async function open(script: FakeScript, extra: Partial<MemberConfig> = {}, model
     workDir,
     permissions: "read",
     startTimeoutMs: 20_000,
+    ...(limits ? { budget: { path: join(dir, "budget.json"), limits } } : {}),
   };
   const member = await AcpSession.open(spec, {
     onEvent: (event) => events.push(event),
@@ -32,6 +41,100 @@ async function open(script: FakeScript, extra: Partial<MemberConfig> = {}, model
 }
 
 describe("AcpSession", () => {
+  it("saves partial text and stops after two submission attempts", async () => {
+    const limits = { workSec: 30, submissionSec: 150, finalSec: 150, maxTokens: 1000, maxOutputTokens: 1000 };
+    const { member, log } = await open(
+      { rounds: { "1": { reply: "Partial finding without a vote", totalTokens: 12 } } },
+      {},
+      undefined,
+      limits,
+    );
+    try {
+      const result = await castVote(member, "## Round 1", {
+        label: "member:A",
+        round: 1,
+        openItems: ["a"],
+        schema: compileVoteSchema(),
+        timeoutMs: 30000,
+      });
+      expect(result.status).toBe("no_result");
+      expect(result.attempts).toHaveLength(3);
+      expect(result.body).toContain("Partial finding");
+      expect(result.attempts[0]?.usage?.totalTokens).toBe(12);
+      expect((await readLog(log)).filter((entry) => typeof entry["prompt"] === "string")).toHaveLength(3);
+      expect(member.budget?.phase()).toBe("stopped");
+    } finally {
+      await member.close();
+    }
+  });
+
+  it("does not retry an adapter that crashed during a bounded vote", async () => {
+    const { member } = await open({ rounds: { "1": { crash: true } } }, {}, undefined, {
+      workSec: 30,
+      submissionSec: 150,
+      finalSec: 150,
+      maxTokens: 1000,
+      maxOutputTokens: 1000,
+    });
+    try {
+      const result = await castVote(member, "## Round 1", {
+        label: "member:A",
+        round: 1,
+        openItems: ["a"],
+        schema: compileVoteSchema(),
+        timeoutMs: 30000,
+      });
+      expect(result.status).toBe("no_result");
+      expect(result.attempts).toHaveLength(1);
+    } finally {
+      await member.close();
+    }
+  });
+
+  it("denies investigation reads during submission", async () => {
+    const { member, log } = await open(
+      { rounds: { "1": { permission: "read", readFile: "a.txt", reply: "partial" } } },
+      {},
+      undefined,
+      { workSec: 30, submissionSec: 150, finalSec: 150, maxTokens: 1000, maxOutputTokens: 1000 },
+    );
+    try {
+      member.budget?.advance();
+      await member.prompt("submit", 10000);
+      const entries = await readLog(log);
+      expect(entries).toContainEqual({ permission: "read", outcome: { outcome: "cancelled" } });
+      expect(entries.find((entry) => entry["readFile"] === "a.txt")?.["error"]).toBeDefined();
+    } finally {
+      await member.close();
+    }
+  });
+
+  it("sends a timed reminder and ends both submission periods without resetting the clock", async () => {
+    const { member, log } = await open({ rounds: { "1": { reply: "late", delayMs: 10000 } } }, {}, undefined, {
+      workSec: 2,
+      submissionSec: 0.2,
+      finalSec: 0.2,
+      maxTokens: 1000,
+      maxOutputTokens: 1000,
+    });
+    try {
+      const result = await castVote(member, "## Round 1", {
+        label: "member:A",
+        round: 1,
+        openItems: ["a"],
+        schema: compileVoteSchema(),
+        timeoutMs: 30000,
+      });
+      expect(result.status).toBe("no_result");
+      expect(member.budget?.phase()).toBe("stopped");
+      const entries = await readLog(log);
+      expect(entries.some((entry) => String(entry["prompt"]).startsWith("Time reminder:"))).toBe(true);
+      expect(result.attempts.length).toBeLessThanOrEqual(4);
+    } finally {
+      await member.close();
+    }
+  });
+
   it("opens a session, sets the model and options, and collects the reply", async () => {
     const { member, log, events } = await open(
       { models: ["small", "large"], rounds: { "1": { reply: "hello world", totalTokens: 12 } } },

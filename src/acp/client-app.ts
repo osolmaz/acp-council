@@ -11,6 +11,7 @@ export type ClientPolicy = {
   workDir: string;
   permissions: Permissions;
   allowKinds: acp.ToolKind[];
+  canInvestigate?: () => boolean;
 };
 
 /** The text that the agent sends during the current turn. */
@@ -38,7 +39,10 @@ export function clientApp(policy: ClientPolicy, hooks: ClientHooks, transcript: 
   return acp
     .client({ name: "acp-jury" })
     .onRequest(acp.methods.client.session.requestPermission, (ctx) => {
-      const response = choosePermission(ctx.params, policy.permissions, policy.allowKinds);
+      const response: acp.RequestPermissionResponse =
+        policy.canInvestigate?.() === false
+          ? { outcome: { outcome: "cancelled" } }
+          : choosePermission(ctx.params, policy.permissions, policy.allowKinds);
       hooks.onEvent({
         type: "permission",
         toolCall: ctx.params.toolCall,
@@ -47,9 +51,10 @@ export function clientApp(policy: ClientPolicy, hooks: ClientHooks, transcript: 
       });
       return response;
     })
-    .onRequest(acp.methods.client.fs.readTextFile, async (ctx) => ({
-      content: await readInside(policy.workDir, ctx.params.path, ctx.params.line, ctx.params.limit),
-    }))
+    .onRequest(acp.methods.client.fs.readTextFile, async (ctx) => {
+      if (policy.canInvestigate?.() === false) throw new Error("investigation period ended");
+      return { content: await readInside(policy.workDir, ctx.params.path, ctx.params.line, ctx.params.limit) };
+    })
     .onRequest(acp.methods.client.fs.writeTextFile, (ctx) => {
       hooks.onEvent({ type: "write_denied", path: ctx.params.path });
       throw new Error("acp-jury members cannot write files");
