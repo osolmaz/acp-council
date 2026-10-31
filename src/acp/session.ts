@@ -190,7 +190,7 @@ async function startSession(
     connection.agent.request(acp.methods.agent.initialize, {
       protocolVersion: acp.PROTOCOL_VERSION,
       clientCapabilities: { fs: { readTextFile: true, writeTextFile: false }, terminal: false },
-      clientInfo: { name: "acp-jury", version: VERSION },
+      clientInfo: { name: "acp-council", version: VERSION },
     }),
     spec.startTimeoutMs,
     "initialize",

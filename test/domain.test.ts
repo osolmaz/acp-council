@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { memberLabel, messageId } from "../src/domain/board.ts";
 import { countItem, countRound } from "../src/domain/count.ts";
-import { applyRound, juryResult, nextRound, startJury, type JurySpec } from "../src/domain/jury.ts";
+import { applyRound, councilResult, nextRound, startCouncil, type CouncilSpec } from "../src/domain/council.ts";
 import { blind, discuss, MODES } from "../src/domain/modes.ts";
 import { buildNudgePrompt, buildTurnPrompt, formatMessage } from "../src/domain/prompts.ts";
 import { renderReport } from "../src/domain/report.ts";
@@ -156,8 +156,8 @@ describe("votes", () => {
   });
 });
 
-describe("jury rounds", () => {
-  const spec = (mode: JurySpec["mode"]): JurySpec => ({
+describe("council rounds", () => {
+  const spec = (mode: CouncilSpec["mode"]): CouncilSpec => ({
     mode,
     rule: "unanimous",
     rounds: 5,
@@ -169,7 +169,7 @@ describe("jury rounds", () => {
   });
 
   it("plays one round in blind mode", () => {
-    const state = startJury(spec("blind"));
+    const state = startCouncil(spec("blind"));
     expect(nextRound(state)).toEqual({ round: 1, openItems: ["a", "b"] });
     applyRound(
       state,
@@ -180,14 +180,14 @@ describe("jury rounds", () => {
       ]),
     );
     expect(nextRound(state)).toBeNull();
-    const result = juryResult(state);
+    const result = councilResult(state);
     expect(result).toMatchObject({ mode: "blind", rounds: 1, agreed: 1, split: 1 });
     expect(result.items[0]).toMatchObject({ id: "a", status: "agreed", choice: "yes", closedInRound: 1 });
     expect(result.items[1]).toMatchObject({ id: "b", status: "split", choice: null, closedInRound: null });
   });
 
   it("discusses only open items, records changes, and ends when all agree", () => {
-    const state = startJury(spec("discuss"));
+    const state = startCouncil(spec("discuss"));
     applyRound(
       state,
       1,
@@ -206,7 +206,7 @@ describe("jury rounds", () => {
       ]),
     );
     expect(nextRound(state)).toBeNull();
-    const b = juryResult(state).items[1];
+    const b = councilResult(state).items[1];
     expect(b).toMatchObject({ status: "agreed", choice: "yes", closedInRound: 2 });
     expect(b?.members["member:B"]).toEqual({
       blind: { choice: "no", reason: "why no" },
@@ -216,7 +216,7 @@ describe("jury rounds", () => {
   });
 
   it("stops at the round limit and counts a missing vote as no agreement", () => {
-    const state = startJury(spec("discuss"));
+    const state = startCouncil(spec("discuss"));
     for (let next = nextRound(state); next !== null; next = nextRound(state)) {
       applyRound(
         state,
@@ -227,7 +227,7 @@ describe("jury rounds", () => {
         ]),
       );
     }
-    const result = juryResult(state);
+    const result = councilResult(state);
     expect(result.rounds).toBe(6);
     expect(result.split).toBe(2);
     expect(result.items[0]?.members["member:B"]).toEqual({ blind: null, final: null, changes: [] });
@@ -296,7 +296,7 @@ describe("prompts", () => {
 
 describe("report", () => {
   it("lists split items first and escapes table cells", () => {
-    const state = startJury({
+    const state = startCouncil({
       mode: "discuss",
       rule: "unanimous",
       rounds: 5,
@@ -317,13 +317,13 @@ describe("report", () => {
     applyRound(state, 2, new Map([["member:A", { b: { choice: "yes", reason: "agreed now" } }]]));
     const report = renderReport({
       runId: "r1",
-      jury: "review",
+      council: "review",
       maxRounds: 5,
       members: [
         { label: "member:A", name: "one", agent: "claude", model: "opus" },
         { label: "member:B", name: "two", agent: "codex", model: "astra" },
       ],
-      result: juryResult(state),
+      result: councilResult(state),
     });
     expect(report).toContain("- Rounds: 2 of at most 6");
     expect(report).toContain("### b: split");
@@ -335,7 +335,7 @@ describe("report", () => {
   });
 
   it("says none for empty sections", () => {
-    const state = startJury({
+    const state = startCouncil({
       mode: "blind",
       rule: "majority",
       rounds: 5,
@@ -343,7 +343,7 @@ describe("report", () => {
       labels: ["member:A"],
     });
     applyRound(state, 1, new Map([["member:A", v({ a: "yes" })]]));
-    const report = renderReport({ runId: "r", jury: "c", maxRounds: 5, members: [], result: juryResult(state) });
+    const report = renderReport({ runId: "r", council: "c", maxRounds: 5, members: [], result: councilResult(state) });
     expect(report).toContain("## Split items\n\nNone.");
     expect(report).toContain("- Rounds: 1\n");
   });

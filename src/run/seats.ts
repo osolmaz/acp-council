@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { planLaunch } from "../agents/registry.ts";
 import type { LaunchPlan } from "../agents/profile.ts";
-import type { ResolvedJury } from "../config/load.ts";
+import type { ResolvedCouncil } from "../config/load.ts";
 import type { Item } from "../domain/types.ts";
 import type { VoteSchema } from "../domain/vote.ts";
 import { Member } from "./member.ts";
@@ -12,7 +12,7 @@ import type { Workspace } from "./workspace.ts";
 export type SeatedMember = Seat & { plan: LaunchPlan };
 
 export type SeatingOptions = {
-  jury: ResolvedJury;
+  council: ResolvedCouncil;
   labels: string[];
   folder: string;
   question: string;
@@ -28,10 +28,10 @@ export async function seatMembers(
   workspace: Workspace,
   store: RunStore,
 ): Promise<SeatedMember[]> {
-  const { jury } = options;
-  const permissions = jury.settings.permissions;
+  const { council } = options;
+  const permissions = council.settings.permissions;
   const seats: SeatedMember[] = [];
-  for (const [index, { name, config }] of jury.members.entries()) {
+  for (const [index, { name, config }] of council.members.entries()) {
     const label = options.labels[index] ?? "";
     const { scratchDir, workDir } = await workspace.seat(label, options.folder);
     const plan = await planLaunch(config, permissions, scratchDir);
@@ -43,13 +43,13 @@ export async function seatMembers(
       workDir,
       permissions,
       startTimeoutMs: START_TIMEOUT_MS,
-      ...(jury.settings.sessionLimits
-        ? { budget: { path: join(store.memberDir(label), "budget.json"), limits: jury.settings.sessionLimits } }
+      ...(council.settings.sessionLimits
+        ? { budget: { path: join(store.memberDir(label), "budget.json"), limits: council.settings.sessionLimits } }
         : {}),
     };
     const intro = {
       label,
-      memberCount: jury.members.length,
+      memberCount: council.members.length,
       question: options.question,
       items: options.items,
       schema: options.schema,

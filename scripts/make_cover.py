@@ -7,8 +7,9 @@ https://github.com/osolmaz/yodel-grotesk (assets/fonts/yodel-grotesk). MONO_DIR 
 DejaVuSansMono-Bold.ttf. Each string is shaped with HarfBuzz, so kerning and ligatures survive, and each glyph is
 drawn at the position HarfBuzz returns. The SVG has no text elements and needs no font.
 
-The picture: a terminal in a small project, with a real `acp-jury run` and its real output. Three members vote on
-three items about the project's code, discuss the one item they split on, and agree on it in round 2.
+The picture: a terminal in a small project, with a real run and its real output. Three members vote on three items
+about the project's code, discuss the one item they split on, and agree on it in round 2. The run was made on 16
+October 2026, when the tool was called acp-jury; the command and the report folder show the new name.
 """
 
 from __future__ import annotations
@@ -37,10 +38,10 @@ CARD_BORDER = "#D9D3C7"
 LABEL = "#6E6A62"
 BAR = "#EBE7DE"
 
-NAME = "acp-jury"
-TAGLINE = ["An LLM jury whose members are coding", "agents, such as Claude Code, Codex and Pi."]
+NAME = "acp-council"
+TAGLINE = ["An LLM council whose members are coding", "agents, such as Claude Code, Codex and Pi."]
 
-# The real session: `acp-jury run` in a small project, with its real output (stderr, then stdout).
+# The real session in a small project, with its real output (stderr, then stdout).
 PROMPT = "$ "
 COMMAND = " run review --dir src --items items.json --run-id demo"
 OUTPUT = [
@@ -53,7 +54,7 @@ OUTPUT = [
     "round 2: member:A (claude-opus-5-5) voted",
     "round 2: member:B (gpt-6-astra) voted",
     "run demo: 3 agreed, 0 split after 2 round(s) (all_agreed)",
-    "report: .acp-jury/runs/demo/report.md",
+    "report: .acp-council/runs/demo/report.md",
 ]
 
 
@@ -219,15 +220,15 @@ PAD = 14.0
 def terminal(mono: Font, mono_bold: Font, x: float, y: float, w: float) -> str:
     """The session: the prompt, the product name in bold dark type, the rest of the command, then the output."""
     left = x + PAD
-    lines = [PROMPT + "acp-jury" + COMMAND, *OUTPUT]
+    lines = [PROMPT + "acp-council" + COMMAND, *OUTPUT]
     for line in lines:
         assert advance(mono, line, MONO_SIZE) <= w - 2 * PAD, f"terminal line too wide: {line}"
     first = y + PAD + MONO_SIZE
     name_x = left + advance(mono, PROMPT, MONO_SIZE)
-    command_x = name_x + advance(mono_bold, "acp-jury", MONO_SIZE)
+    command_x = name_x + advance(mono_bold, "acp-council", MONO_SIZE)
     parts = [
         path(mono, PROMPT.strip(), left, first, MONO_SIZE, LABEL),
-        path(mono_bold, "acp-jury", name_x, first, MONO_SIZE, TEXT),
+        path(mono_bold, "acp-council", name_x, first, MONO_SIZE, TEXT),
         path(mono, COMMAND, command_x, first, MONO_SIZE, SECONDARY),
     ]
     for i, line in enumerate(OUTPUT, start=1):
@@ -245,7 +246,7 @@ def build(yodel_dir: Path, mono_dir: Path) -> str:
         64 + width(bold, shaped(bold, NAME, 64, tracking=-5), 64),
         *(64 + text_width(regular, line, 19) for line in TAGLINE),
     )
-    longest = max(advance(mono, line, MONO_SIZE) for line in (PROMPT + "acp-jury" + COMMAND, *OUTPUT))
+    longest = max(advance(mono, line, MONO_SIZE) for line in (PROMPT + "acp-council" + COMMAND, *OUTPUT))
     term_w = math.ceil(longest + 2 * PAD)  # equal padding left and right of the longest line
     term_x = WIDTH - 64 - term_w - 0.5  # the window's border is centered on its edge; keep all of it inside
     assert text_right <= term_x - 32, f"text block runs into the window: {text_right:.1f} > {term_x - 32:.1f}"
@@ -261,8 +262,8 @@ def build(yodel_dir: Path, mono_dir: Path) -> str:
     label = " ".join(TAGLINE)
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" viewBox="0 0 {WIDTH} {HEIGHT}" '
-        f'role="img" aria-label="acp-jury: {label}">',
-        f"<title>acp-jury: {label}</title>",
+        f'role="img" aria-label="acp-council: {label}">',
+        f"<title>acp-council: {label}</title>",
         f'<rect width="{WIDTH}" height="{HEIGHT}" rx="12" fill="{BACKGROUND}"/>',
         path(bold, NAME, 64, name_y, 64, TEXT, tracking=-5),
         path(regular, TAGLINE[0], 64, name_y + 42, 19, SECONDARY),

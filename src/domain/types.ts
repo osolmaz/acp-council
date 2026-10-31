@@ -51,7 +51,7 @@ export type ItemResult = {
   members: Record<string, MemberItemRecord>;
 };
 
-export type JuryResult = {
+export type CouncilResult = {
   mode: Mode;
   rule: Rule;
   rounds: number;

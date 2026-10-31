@@ -24,7 +24,7 @@ export async function planLaunch(
       configOptions: {},
       allowKinds: [],
       clean: null,
-      cleanNote: "A custom command: acp-jury cannot tell whether it runs clean.",
+      cleanNote: "A custom command: acp-council cannot tell whether it runs clean.",
     };
   }
   const profile = AGENTS[member.agent];

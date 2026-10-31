@@ -34,7 +34,7 @@ afterAll(async () => {
 
 /** A temporary folder that is removed after the test file. */
 export async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "acp-jury-test-"));
+  const dir = await mkdtemp(join(tmpdir(), "acp-council-test-"));
   created.push(dir, `${dir}-copy`);
   return dir;
 }

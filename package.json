@@ -1,12 +1,12 @@
 {
-  "name": "acp-jury",
+  "name": "acp-council",
   "version": "0.1.0",
   "private": true,
-  "description": "An LLM jury whose members are coding agents, such as Claude Code, Codex and Pi",
+  "description": "An LLM council whose members are coding agents, such as Claude Code, Codex and Pi",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "acp-jury": "dist/cli/main.js"
+    "acp-council": "dist/cli/main.js"
   },
   "exports": {
     ".": {
