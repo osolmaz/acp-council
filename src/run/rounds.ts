@@ -1,4 +1,4 @@
-import { applyRound, nextRound, type JuryState } from "../domain/jury.ts";
+import { applyRound, nextRound, type CouncilState } from "../domain/council.ts";
 import type { ModeRules } from "../domain/modes.ts";
 import type { Vote } from "../domain/types.ts";
 import { pool } from "../util/async.ts";
@@ -6,7 +6,7 @@ import { boardFromRecords } from "./board.ts";
 import { limitReached, type LimitReason } from "./limits.ts";
 import type { Member } from "./member.ts";
 import type { RoundRecord, RunStore } from "./store.ts";
-import type { JuryFile } from "../config/schema.ts";
+import type { CouncilFile } from "../config/schema.ts";
 
 export type StopReason = "all_agreed" | "rounds_done" | LimitReason;
 
@@ -19,9 +19,9 @@ export type Seat = { member: Member; name: string };
 export type RoundLoopOptions = {
   seats: Seat[];
   mode: ModeRules;
-  state: JuryState;
+  state: CouncilState;
   store: RunStore;
-  settings: JuryFile;
+  settings: CouncilFile;
   /** Rounds saved by an earlier run with the same ID. They are reused, not played again. */
   saved: RoundRecord[];
   onProgress?: ((progress: Progress) => void) | undefined;

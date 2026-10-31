@@ -1,4 +1,4 @@
-import type { JuryResult, ItemResult, ItemVote } from "./types.ts";
+import type { CouncilResult, ItemResult, ItemVote } from "./types.ts";
 
 export type ReportMember = {
   label: string;
@@ -9,10 +9,10 @@ export type ReportMember = {
 
 export type ReportInput = {
   runId: string;
-  jury: string;
+  council: string;
   maxRounds: number;
   members: ReportMember[];
-  result: JuryResult;
+  result: CouncilResult;
 };
 
 function cell(text: string): string {
@@ -55,9 +55,9 @@ export function renderReport(input: ReportInput): string {
   const split = result.items.filter((item) => item.status === "split");
   const agreed = result.items.filter((item) => item.status === "agreed");
   return [
-    `# Jury run ${input.runId}`,
+    `# Council run ${input.runId}`,
     [
-      `- Jury: ${input.jury}`,
+      `- Council: ${input.council}`,
       `- Mode: ${result.mode}, rule: ${result.rule}`,
       `- Rounds: ${result.rounds}${limit}`,
       `- Items: ${result.agreed} agreed, ${result.split} split`,

@@ -1,10 +1,10 @@
 ---
-title: acp-jury implementation plan
+title: acp-council implementation plan
 author: Onur Solmaz <2453968+osolmaz@users.noreply.github.com>
 date: 2026-10-15
 ---
 
-# acp-jury implementation plan
+# acp-council implementation plan
 
 ## TL;DR
 
@@ -24,7 +24,7 @@ Code, Codex and Pi pass. See [Status](#status).
 - `zod` v4 for the configuration, board messages and votes. The caller's JSON Schema for a vote becomes a zod
   schema through `z.fromJSONSchema()`, so there is one validator.
 - `commander` for the CLI.
-- Plain `async` code, no `effect`: acp-jury is a CLI and a small library, and plain `async` is clearer here.
+- Plain `async` code, no `effect`: acp-council is a CLI and a small library, and plain `async` is clearer here.
 - `vitest` 4.1 for tests, against a scripted fake ACP agent. Not Vitest 5: the Stryker Vitest runner does not
   activate mutants under Vitest 5, which made the mutation gate pass nothing.
 - StrykerJS for mutation tests on the core logic in `src/domain`.
@@ -57,15 +57,15 @@ Code, Codex and Pi pass. See [Status](#status).
   `blind`, prompts and the report.
 - `src/run/`: `RunStore` (the run folder), `Workspace` (private copies), `Member` (a seat and its session), the turn
   protocol (one nudge, then `no_result`), the derived board, `RoundLoop`, and resume by run ID.
-- `src/cli/`: `acp-jury run` and `acp-jury show`.
+- `src/cli/`: `acp-council run` and `acp-council show`.
 - Done when a blind run of three fake members gives the expected result, and a rerun after a stop resumes
   without repeating saved turns.
 
 ### M3: configuration levels
 
-- `src/config/`: `members.json` and `juries/<name>.json` at the user level (`~/.acp-jury`,
-  `ACP_JURY_HOME`, `--config-dir`) and the repo level (the nearest `.acp-jury`), where the repo file wins and
-  files are never merged; jury overrides for one run, checked again; `acp-jury juries`.
+- `src/config/`: `members.json` and `councils/<name>.json` at the user level (`~/.acp-council`,
+  `ACP_COUNCIL_HOME`, `--config-dir`) and the repo level (the nearest `.acp-council`), where the repo file wins and
+  files are never merged; council overrides for one run, checked again; `acp-council councils`.
 - Done when tests cover both levels, a repo file that replaces a user file, overrides, and broken files.
 
 ### M4: real adapters
@@ -108,7 +108,7 @@ Smoke tests on 2026-10-16, with a one-file Python folder and yes-or-no items, th
 ## Risks
 
 - The adapters change fast. Pinning keeps runs repeatable; each version bump gets a smoke test.
-- `pi-acp` 0.0.34 is built on ACP SDK 0.26, and acp-jury uses SDK 1.8. The Pi smoke test passed with them.
+- `pi-acp` 0.0.34 is built on ACP SDK 0.26, and acp-council uses SDK 1.8. The Pi smoke test passed with them.
 - Codex cannot run clean without copying its login. The run records Codex members as not clean.
 - Discussion can push members to agree on a wrong answer. Keeping each blind vote makes this visible.
 - Long folders cost time and tokens per member. Limits per run stop a runaway run.

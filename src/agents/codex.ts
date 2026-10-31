@@ -13,6 +13,6 @@ export const codex: AgentProfile = {
       allowKinds: ["execute"],
       clean: false,
       cleanNote:
-        "Codex reads its home folder, which holds both the login and the user's instructions. acp-jury does not copy the login, so the user's instructions stay on.",
+        "Codex reads its home folder, which holds both the login and the user's instructions. acp-council does not copy the login, so the user's instructions stay on.",
     }),
 };

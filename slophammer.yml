@@ -11,7 +11,7 @@ typescript:
     targets:
       - src/domain/count.ts
       - src/domain/vote.ts
-      - src/domain/jury.ts
+      - src/domain/council.ts
   dependency_boundaries:
     - from: src/meta
       allow:

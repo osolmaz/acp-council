@@ -10,7 +10,7 @@ export type Viewer = {
 /** The rules of a mode: how many rounds it plays, who sees which message, and what each round asks for. */
 export type ModeRules = {
   name: Mode;
-  /** The last round that the mode plays, given the jury's limit of discussion rounds. */
+  /** The last round that the mode plays, given the council's limit of discussion rounds. */
   lastRound: (discussionRounds: number) => number;
   visible: (message: Message, viewer: Viewer) => boolean;
   instruction: (round: number, openItems: string[]) => string;

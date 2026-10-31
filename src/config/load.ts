@@ -2,15 +2,15 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { z } from "zod";
-import { juryFileSchema, membersFileSchema, type JuryFile, type MemberConfig } from "./schema.ts";
+import { councilFileSchema, membersFileSchema, type CouncilFile, type MemberConfig } from "./schema.ts";
 
-export const CONFIG_DIR_NAME = ".acp-jury";
+export const CONFIG_DIR_NAME = ".acp-council";
 
 export class ConfigError extends Error {
   override name = "ConfigError";
 }
 
-/** Where the configuration came from. A jury given as a file path has the level `file`. */
+/** Where the configuration came from. A council given as a file path has the level `file`. */
 export type ConfigLevel = "repo" | "user" | "file";
 
 export type ConfigDirs = {
@@ -20,18 +20,18 @@ export type ConfigDirs = {
 
 export type ResolvedMember = { name: string; config: MemberConfig };
 
-export type ResolvedJury = {
+export type ResolvedCouncil = {
   name: string;
   level: ConfigLevel;
   path: string;
-  settings: JuryFile;
+  settings: CouncilFile;
   membersPath: string;
   members: ResolvedMember[];
   schema: { path: string; json: Record<string, unknown> } | null;
   question: { path: string; text: string } | null;
 };
 
-export type JuryListing = {
+export type CouncilListing = {
   name: string;
   level: ConfigLevel;
   path: string;
@@ -39,11 +39,11 @@ export type JuryListing = {
   members: string[];
 };
 
-/** A jury name. It has no dot, so files such as `review.schema.json` next to the juries are not juries. */
+/** A council name. It has no dot, so files such as `review.schema.json` next to the councils are not councils. */
 const NAME = /^[A-Za-z0-9_-]+$/;
 
 export function userConfigDir(env: NodeJS.ProcessEnv, override?: string): string {
-  return resolve(override ?? env["ACP_JURY_HOME"] ?? join(homedir(), CONFIG_DIR_NAME));
+  return resolve(override ?? env["ACP_COUNCIL_HOME"] ?? join(homedir(), CONFIG_DIR_NAME));
 }
 
 async function isDirectory(path: string): Promise<boolean> {
@@ -60,7 +60,7 @@ async function isFile(path: string): Promise<boolean> {
   );
 }
 
-/** Finds the nearest `.acp-jury` folder from `start` upward. The user folder is never a repo folder. */
+/** Finds the nearest `.acp-council` folder from `start` upward. The user folder is never a repo folder. */
 export async function findRepoConfigDir(start: string, userDir: string): Promise<string | null> {
   let dir = resolve(start);
   for (;;) {
@@ -139,23 +139,26 @@ export async function loadMembers(dirs: ConfigDirs): Promise<{ path: string; mem
   return { path: found.path, members: await readJsonFile(found.path, membersFileSchema) };
 }
 
-/** Whether a jury argument is the path of a jury file rather than a jury name. */
-export function isJuryPath(name: string): boolean {
+/** Whether a council argument is the path of a council file rather than a council name. */
+export function isCouncilPath(name: string): boolean {
   return name.endsWith(".json") || name.includes("/");
 }
 
-async function locateJury(name: string, dirs: ConfigDirs): Promise<{ name: string; level: ConfigLevel; path: string }> {
-  if (isJuryPath(name)) {
+async function locateCouncil(
+  name: string,
+  dirs: ConfigDirs,
+): Promise<{ name: string; level: ConfigLevel; path: string }> {
+  if (isCouncilPath(name)) {
     return { name: basename(name, ".json"), level: "file", path: resolve(name) };
   }
   if (!NAME.test(name)) {
-    throw new ConfigError(`invalid jury name: ${name}`);
+    throw new ConfigError(`invalid council name: ${name}`);
   }
-  const found = await firstExisting(dirs, join("juries", `${name}.json`));
+  const found = await firstExisting(dirs, join("councils", `${name}.json`));
   if (found === null) {
     throw new ConfigError(
-      `no jury named ${name} in ${levelDirs(dirs)
-        .map(({ dir }) => join(dir, "juries"))
+      `no council named ${name} in ${levelDirs(dirs)
+        .map(({ dir }) => join(dir, "councils"))
         .join(" or ")}`,
     );
   }
@@ -175,62 +178,62 @@ async function optionalFile(
   return { path, text: await readText(path) };
 }
 
-/** Fields that a caller can change for one run. The result is checked again, so a run cannot break a jury's rules. */
-export type JuryOverrides = Partial<Pick<JuryFile, "mode" | "members" | "rounds" | "rule">>;
+/** Fields that a caller can change for one run. The result is checked again, so a run cannot break a council's rules. */
+export type CouncilOverrides = Partial<Pick<CouncilFile, "mode" | "members" | "rounds" | "rule">>;
 
-function applyOverrides(path: string, jury: JuryFile, overrides: JuryOverrides): JuryFile {
-  const parsed = juryFileSchema.safeParse({ ...jury, ...overrides });
+function applyOverrides(path: string, council: CouncilFile, overrides: CouncilOverrides): CouncilFile {
+  const parsed = councilFileSchema.safeParse({ ...council, ...overrides });
   if (!parsed.success) {
     throw new ConfigError(`the overrides for ${path} are not valid:\n${z.prettifyError(parsed.error)}`);
   }
   return parsed.data;
 }
 
-export async function resolveJury(
+export async function resolveCouncil(
   name: string,
   dirs: ConfigDirs,
-  overrides: JuryOverrides = {},
-): Promise<ResolvedJury> {
-  const located = await locateJury(name, dirs);
-  const jury = applyOverrides(located.path, await readJsonFile(located.path, juryFileSchema), overrides);
+  overrides: CouncilOverrides = {},
+): Promise<ResolvedCouncil> {
+  const located = await locateCouncil(name, dirs);
+  const council = applyOverrides(located.path, await readJsonFile(located.path, councilFileSchema), overrides);
   const { path: membersPath, members } = await loadMembers(dirs);
-  const resolvedMembers = jury.members.map((memberName) => {
+  const resolvedMembers = council.members.map((memberName) => {
     const config = members[memberName];
     if (config === undefined) {
       throw new ConfigError(
-        `jury ${located.name} names the member ${memberName}, which ${membersPath} does not define`,
+        `council ${located.name} names the member ${memberName}, which ${membersPath} does not define`,
       );
     }
     return { name: memberName, config };
   });
   const base = dirname(located.path);
-  const schemaPath = jury.schema === undefined ? null : resolve(base, jury.schema);
+  const schemaPath = council.schema === undefined ? null : resolve(base, council.schema);
   return {
     ...located,
-    settings: jury,
+    settings: council,
     membersPath,
     members: resolvedMembers,
     schema: schemaPath === null ? null : { path: schemaPath, json: await readJsonFile(schemaPath, objectSchema) },
-    question: await optionalFile(base, jury.question),
+    question: await optionalFile(base, council.question),
   };
 }
 
-async function juryNames(dir: string): Promise<string[]> {
-  const entries = await readdir(join(dir, "juries")).catch(() => []);
+async function councilNames(dir: string): Promise<string[]> {
+  const entries = await readdir(join(dir, "councils")).catch(() => []);
   return entries
     .filter((entry) => entry.endsWith(".json"))
     .map((entry) => basename(entry, ".json"))
     .filter((name) => NAME.test(name));
 }
 
-export async function listJuries(dirs: ConfigDirs): Promise<JuryListing[]> {
-  const listings = new Map<string, JuryListing>();
+export async function listCouncils(dirs: ConfigDirs): Promise<CouncilListing[]> {
+  const listings = new Map<string, CouncilListing>();
   for (const { level, dir } of levelDirs(dirs)) {
-    for (const name of await juryNames(dir)) {
+    for (const name of await councilNames(dir)) {
       if (!listings.has(name)) {
-        const path = join(dir, "juries", `${name}.json`);
-        const jury = await readJsonFile(path, juryFileSchema);
-        listings.set(name, { name, level, path, mode: jury.mode, members: jury.members });
+        const path = join(dir, "councils", `${name}.json`);
+        const council = await readJsonFile(path, councilFileSchema);
+        listings.set(name, { name, level, path, mode: council.mode, members: council.members });
       }
     }
   }

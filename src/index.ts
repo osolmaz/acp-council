@@ -3,17 +3,17 @@ export type { AgentProfile, LaunchPlan, Permissions } from "./agents/profile.ts"
 export {
   ConfigError,
   configDirs,
-  listJuries,
-  resolveJury,
+  listCouncils,
+  resolveCouncil,
   type ConfigDirs,
-  type JuryListing,
-  type JuryOverrides,
-  type ResolvedJury,
+  type CouncilListing,
+  type CouncilOverrides,
+  type ResolvedCouncil,
 } from "./config/load.ts";
-export type { JuryFile, MemberConfig } from "./config/schema.ts";
+export type { CouncilFile, MemberConfig } from "./config/schema.ts";
 export { MODES, type ModeRules } from "./domain/modes.ts";
-export type { JuryResult, Item, ItemResult, ItemVote, Message, Mode, Rule, Vote } from "./domain/types.ts";
+export type { CouncilResult, Item, ItemResult, ItemVote, Message, Mode, Rule, Vote } from "./domain/types.ts";
 export { RunError } from "./run/errors.ts";
 export type { Progress, StopReason } from "./run/rounds.ts";
-export { runJury, type RunOptions, type RunOutcome } from "./run/runner.ts";
+export { runCouncil, type RunOptions, type RunOutcome } from "./run/runner.ts";
 export { VERSION } from "./meta/version.ts";
