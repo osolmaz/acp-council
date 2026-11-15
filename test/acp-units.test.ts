@@ -191,6 +191,28 @@ describe("agent profiles", () => {
     expect((await planLaunch({ agent: "claude" }, "read", await tempDir())).allowKinds).toEqual([]);
   });
 
+  it("gives the agent the member's environment, with references read from acp-council's own", async () => {
+    process.env["ACP_COUNCIL_TEST_KEY"] = "k-123";
+    const plan = await planLaunch(
+      { agent: "claude", env: { BASE: "http://pool", TOKEN: "Bearer ${ACP_COUNCIL_TEST_KEY}" } },
+      "read",
+      await tempDir(),
+    );
+    expect(plan.env).toEqual({ BASE: "http://pool", TOKEN: "Bearer k-123" });
+    const dir = await tempDir();
+    const pi = await planLaunch({ agent: "pi", env: { X: "1" } }, "read", dir);
+    expect(pi.env).toEqual({ PI_ACP_PI_COMMAND: join(dir, "pi-clean.sh"), X: "1" });
+    const custom = await planLaunch({ command: ["node"], env: { Y: "2" } }, "read", await tempDir());
+    expect(custom.env).toEqual({ Y: "2" });
+  });
+
+  it("refuses a member whose environment names a variable that is not set", async () => {
+    delete process.env["ACP_COUNCIL_TEST_MISSING"];
+    await expect(
+      planLaunch({ agent: "codex", env: { KEY: "${ACP_COUNCIL_TEST_MISSING}" } }, "read", await tempDir()),
+    ).rejects.toThrow("the member's KEY names ${ACP_COUNCIL_TEST_MISSING}, which is not set");
+  });
+
   it("keeps a custom command, and lets a member pin another adapter", async () => {
     const custom = await planLaunch({ command: ["node", "agent.js"] }, "read", await tempDir());
     expect(custom).toMatchObject({ agent: null, command: ["node", "agent.js"], clean: null });

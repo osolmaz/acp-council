@@ -4,6 +4,9 @@ export const AGENT_NAMES = ["claude", "codex", "pi"] as const;
 
 export type AgentName = (typeof AGENT_NAMES)[number];
 
+/** An environment variable's name. */
+export const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
 export const memberSchema = z
   .strictObject({
     /** A built-in agent. It sets the adapter command and how the member runs clean. */
@@ -16,6 +19,11 @@ export const memberSchema = z
     options: z.record(z.string(), z.string()).optional(),
     /** Pi only: the extension files to load, such as a model provider. Every other extension stays off. */
     extensions: z.array(z.string().min(1)).optional(),
+    /**
+     * Environment variables for the adapter and its agent, such as a provider's address. A value can name a variable
+     * of acp-council's own environment as `${NAME}`, so that a key is read at launch and never written in the file.
+     */
+    env: z.record(z.string().regex(ENV_NAME), z.string()).optional(),
   })
   .refine((member) => member.agent !== undefined || member.command !== undefined, {
     message: "a member needs an agent or a command",

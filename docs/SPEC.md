@@ -260,6 +260,22 @@ There are two levels, as in Claude Code, Codex and Pi. Each level holds a differ
 | `model` | the model ID with its version, such as `claude-opus-5-5`; the agent resolves it, and `run.json` records the ID and the model the agent reports |
 | `options` | other session config options of the agent, by ID, such as a reasoning effort |
 | `extensions` | Pi only: the extension files to load; every other extension stays off |
+| `env` | environment variables for the adapter and its agent, such as a provider's address; they win over the profile's own. A value can name a variable of acp-council's environment as `${NAME}`, so a key is read at launch and is never written in the file; a name that is not set fails the start |
+
+A member that reaches its model through a proxy pool sets the agent's own variables. Claude Code reads
+`ANTHROPIC_BASE_URL` and `CLAUDE_CODE_OAUTH_TOKEN`; Codex reads a provider from the `config.toml` in its
+`CODEX_HOME`, whose `env_key` names the variable that holds the key:
+
+```json
+{
+  "claude-fable-5-2": {
+    "agent": "claude",
+    "model": "claude-fable-5-2",
+    "env": { "ANTHROPIC_BASE_URL": "http://127.0.0.1:8080", "CLAUDE_CODE_OAUTH_TOKEN": "${POOL_KEY}" }
+  },
+  "gpt-6-astra": { "agent": "codex", "model": "gpt-6-astra", "env": { "CODEX_HOME": "/home/me/.acp-council/codex-pool" } }
+}
+```
 
 `councils/<name>.json`:
 
