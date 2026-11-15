@@ -80,7 +80,8 @@ Either folder can hold either file. When both have a file with the same name, th
 are not merged. `acp-council councils` lists every council and the file it comes from.
 
 A member has an `agent` (`claude`, `codex` or `pi`) and a `model`. It can also set other agent `options`, such as a
-reasoning effort, or replace the adapter `command`. A Pi member can list the `extensions` to load, such as a model
+reasoning effort, or replace the adapter `command`. A member can set `env` for its agent, such as the address of a proxy pool, and a value can read a key from
+acp-council's own environment as `${NAME}`. A Pi member can list the `extensions` to load, such as a model
 provider.
 
 A council has a `mode` (`blind` or `discuss`) and `members`. It can also set `rounds` (at least 5) and a `rule`

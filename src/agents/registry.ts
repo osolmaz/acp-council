@@ -1,6 +1,7 @@
 import type { AgentName, MemberConfig } from "../config/schema.ts";
 import { claude } from "./claude.ts";
 import { codex } from "./codex.ts";
+import { memberEnv } from "./env.ts";
 import { pi } from "./pi.ts";
 import type { AgentProfile, LaunchPlan, Permissions } from "./profile.ts";
 
@@ -15,11 +16,12 @@ export async function planLaunch(
   permissions: Permissions,
   scratchDir: string,
 ): Promise<LaunchPlan> {
+  const env = memberEnv(member.env);
   if (member.agent === undefined) {
     return {
       agent: null,
       command: member.command ?? [],
-      env: {},
+      env,
       sessionMeta: undefined,
       configOptions: {},
       allowKinds: [],
@@ -28,9 +30,12 @@ export async function planLaunch(
     };
   }
   const profile = AGENTS[member.agent];
+  const session = await profile.session({ member, permissions, scratchDir });
   return {
     agent: profile.name,
     command: member.command ?? ["npx", "-y", profile.adapter],
-    ...(await profile.session({ member, permissions, scratchDir })),
+    ...session,
+    // The member's own variables win, so that a member can point its agent at another provider.
+    env: { ...session.env, ...env },
   };
 }
